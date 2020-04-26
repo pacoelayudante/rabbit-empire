@@ -1,3 +1,41 @@
+.mapa {
+  margin: 0px;
+  padding: 0px;
+  --tam-casillero: 112px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fila-casilleros {
+  margin: inherit;
+  padding: inherit;
+  height: var(--tam-casillero);
+  display: flex;
+  flex-direction: row;
+}
+
+.casillero {
+  margin: inherit;
+  padding: inherit;
+  position: relative;
+  width: var(--tam-casillero);
+  height: var(--tam-casillero);
+}
+.casillero > img {
+  position: absolute;
+  top:0;
+  width: 100%;
+  height: 100%;
+}
+
+#root >div >div {
+  /* display: none; */
+  margin-bottom: 10px;
+}
+#root >div >div:first-child {
+  display: initial;
+}
+
 .App {
   text-align: center;
 }

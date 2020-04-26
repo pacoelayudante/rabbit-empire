@@ -1,26 +1,17 @@
 import React from 'react';
-import logo from './logo.svg';
+import { Client } from 'boardgame.io/react';
+import { Local } from 'boardgame.io/multiplayer';
+import RabbitEmpire from './rabbit-empire';
+import Tablero from './tablero';
 import './App.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, multiplayer: Local(), board: Tablero });
+// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, board: Tablero });
 
-export default App;
+export default () =>
+  (<div className='app'>
+    <RabbitEmpireClient playerID='0' debug={false}/>
+    <RabbitEmpireClient playerID='1' debug={false} />
+    <RabbitEmpireClient playerID='2' debug={false} />
+  </div>);
+// export default RabbitEmpireClient;
