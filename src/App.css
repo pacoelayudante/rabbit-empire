@@ -1,7 +1,8 @@
 .mapa {
+  --cant-casilleros: 3;
   margin: 0px;
   padding: 0px;
-  --tam-casillero: 112px;
+  --tam-casillero: calc(100vmin / var(--cant-casilleros));
   display: flex;
   flex-direction: column;
 }
@@ -27,9 +28,12 @@
   width: 100%;
   height: 100%;
 }
+.brillo {
+  opacity: 0.5;
+}
 
 #root >div >div {
-  /* display: none; */
+  display: none;
   margin-bottom: 10px;
 }
 #root >div >div:first-child {

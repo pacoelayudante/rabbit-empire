@@ -32,6 +32,10 @@ export enum TipoFicha {
 export interface Jugador {
     id:string;
     nombre:string;
+    mano:number[],
+    cartasApropiadas:number[],
+    cartasElegidas:number[],
+    items:Ficha[],
     ptsPorTurno:number[];
     ptsPorPegaminos:number;
 }
@@ -56,6 +60,7 @@ export interface Ficha {
 }
 
 export interface Territorio {
+    indice:number;
     x:number;
     y:number;
     tipo:TipoTerritorio;
