@@ -5,7 +5,7 @@ import RabbitEmpire from './rabbit-empire';
 import Tablero from './tablero';
 import './App.css';
 
-const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, multiplayer: Local(), board: Tablero, debug:true });
+const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, multiplayer: Local(), board: Tablero, debug:false });
 // const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, board: Tablero });
 
 export default () =>

@@ -1,10 +1,9 @@
 import { PluginPlayer } from 'boardgame.io/plugins';
-import { Game, Ctx } from 'boardgame.io';
-import { TipoRecurso, TipoTerritorio, Territorio, TipoFicha, TipoCarta, Carta, Jugador } from './tipos';
-import { PlayerAPI } from 'boardgame.io/dist/types/src/plugins/plugin-player';
+import { Game, Ctx, PlayerID } from 'boardgame.io';
+import { TipoRecurso, TipoTerritorio, ITerritorio, TipoFicha, TipoCarta, ICarta, IJugador, IState, ICtx } from './tipos';
 
-const cartasPorRonda : number = 10;
-const cartasPorTurno : number = 2;
+const cartasPorRonda : number = 3;//10
+const cartasElegidasPorTurno : number = 1;//2
 
 const cantCastillos : number[] = [9,9,3];
 const cantCampamentos : number = 6;
@@ -16,9 +15,13 @@ const cantCartasRecurso = [
     { tipo:TipoRecurso.Comodin, cant:2 },
 ]
 
-const ancho : number = 10;
-const alto : number = 10;
 const premapa : string[] = [
+    // 'ccc cc',
+    // 'ccc cc',
+    // 'ccc cc',
+    
+    // 'ccc cc',
+    // 'ccc cc',
     'cpgb mblp cc',
     'cpgb mblp cc',
     'cpgb mblp cc',
@@ -42,9 +45,9 @@ const mapeoTerritoriosLetra : any = {
     'l' : TipoTerritorio.Lago,
 };
 
-const letraTerritorio = (indice:number,x:number,y:number,letra:string):Territorio => {
+const letraTerritorio = (indice:number,x:number,y:number,letra:string):ITerritorio => {
     letra = ['c','p','g','b','m','l'][Math.floor(Math.random()*6.0)];
-    const territorio : Territorio = {
+    const territorio : ITerritorio = {
         indice:indice,x:x,y:y,tipo:mapeoTerritoriosLetra[letra],
     };
     if (territorio.tipo === TipoTerritorio.PuebloInicial) {
@@ -53,11 +56,11 @@ const letraTerritorio = (indice:number,x:number,y:number,letra:string):Territori
     return territorio;
 }
 
-const crearCartas = (territorios:Territorio[]):Carta[] => {
+const crearCartas = (territorios:ITerritorio[]):ICarta[] => {
     let indiceDeCarta : number = 0;
     
     const cartasTerritorios = territorios.map(
-        (territorio):Carta=>({
+        (territorio):ICarta=>({
             indice:(indiceDeCarta++), tipo:TipoCarta.Territorio,
             nombre:`territorio ${(territorio.x+1)}-${(territorio.y+1)}`,
             territorio:territorio}),
@@ -87,7 +90,7 @@ const crearCartas = (territorios:Territorio[]):Carta[] => {
     return cartasTerritorios;
 }
 
-const playerSetup = (playerID):Jugador => {
+const playerSetup = (playerID:PlayerID):IJugador => {
     return ({
         id: playerID,
         nombre: 'sin nombre',
@@ -100,44 +103,75 @@ const playerSetup = (playerID):Jugador => {
     });
 };
 
-const accionElegirCartas = (G,ctx:Ctx,cartas:number[])=>{
-    const pdata : PlayerAPI = ctx.player;
-    const jug : Jugador = pdata.state[ctx.playerID];
-    const mano : number[] = jug.mano;
-    if (cartas.some(cada=>cada===undefined)) {//deben ser todos numeros validos
+const accionElegirCartas = (G:IState,ctx:ICtx,cartas:number[])=>{
+    if (!ctx.playerID) return;
+    const pdata = ctx.player;
+    const jug = pdata.state[ctx.playerID];
+
+    if (cartas == null) {
+        //cancelar
+        jug.cartasElegidas = [];
+        pdata.state[ctx.playerID] = jug;
         return;
     }
-    if (unaCarta !== undefined && otraCarta !== undefined && unaCarta !== otraCarta) {
-        // mas validaciones (tengo las cartas en la mano por ejemplo)
-        // G.
-        if(ctx.events && ctx.events.setActivePlayers) ctx.events.setActivePlayers({currentPlayer:player})
-        console.log(pdata.get());
-        console.log(ctx.activePlayers);
-    }
+    //cartas es un array
+    //deben ser todos numeros validos
+    //debe y la cantidad de cartas correcta
+    if (!cartas.length || cartas.some(cada=>cada===undefined) || cartas.length !== G.reglas.cartasElegidasPorTurno) return;
+    //debe tenerla en la mano
+    if (cartas.some(cada=>!jug.mano.includes(cada))) return;
+    //no debe haber duplicadas (esto es asi, filtro las cartas iguales, deberia filtrarse solo una, si misma)
+    if (cartas.some(cada=>cartas.length !== cartas.filter(filtrada=>filtrada!==cada).length+1 )) return;
+
+    jug.cartasElegidas = cartas;
+    pdata.state[ctx.playerID] = jug;
 };
-const accionSignal = (G,ctx:Ctx)=>{
-    // let pdata : PlayerAPI = ctx.player;
-    // console.log(pdata.get());
-    // console.log(ctx.activePlayers);
+const accionSignal = (G:IState,ctx:Ctx)=>{
     console.log('playerID ' + ctx.playerID); // SI FUNCA PERO NO EN DEBUG
     console.log('currentPlayer ' + ctx.currentPlayer);
-    // console.log(G.player);
 }
 
-const RabbitEmpire : Game = {
+const faseRevelar = (G:IState,ctx:ICtx)=>{
+    console.log('revelar');
+    const newJugState = ctx.playOrder.map(cada=>{
+        const jug = ctx.player.state[cada];
+        jug.mano = jug.mano.filter(carta=>!jug.cartasElegidas.includes(carta));
+        jug.cartasElegidas.forEach(elegida=>{
+            const carta = G.cartas[elegida];
+            if(carta.territorio) revelarTerritorio(G,jug,carta.territorio);
+        });
+        jug.cartasApropiadas = [...jug.cartasApropiadas,...jug.cartasElegidas];
+        jug.cartasElegidas = [];
+        return jug;
+    });
+    const manos = newJugState.map(jug=>jug.mano);
+    newJugState.forEach((jug,indice) => {
+        jug.mano = manos[(indice+1)%manos.length];
+        ctx.player.state[jug.id] = jug;
+    });
+
+    return true;
+}
+
+const revelarTerritorio = (G:IState,jug:IJugador,territorio:ITerritorio)=>{
+    territorio.dueño = jug.id;
+    G.mapa[territorio.y][territorio.x] = territorio;
+};
+
+const RabbitEmpire : Game<IState,ICtx> = {
     name : 'RabbitEmpire',
 
     plugins : [PluginPlayer({setup:playerSetup})],
 
-    setup : (ctx, setupData) => {
+    setup : (ctx:ICtx, setupData):IState => {
         const trimpremapa = premapa.map(fila=>fila.replace(/[^cpgbml]/gi,''));        
         let indiceT : number = 0;
-        const mapa:Territorio[][] = trimpremapa.map( (fila,y)=> fila.split('').map((letra,x)=>letraTerritorio(indiceT++,x,y,letra)) );
+        const mapa = trimpremapa.map( (fila,y)=> fila.split('').map((letra,x)=>letraTerritorio(indiceT++,x,y,letra)) );
         const cartas = crearCartas(mapa.flat());
-        const mazo = ctx.random?.Shuffle( cartas.map(carta=>carta.indice) );
-        // const mazo = cartas.map(carta=>carta.indice);
+        const mazo = ctx.random.Shuffle( cartas.map(carta=>carta.indice) );
 
-        return ({mapa:mapa,cartas:cartas,mazo:mazo,players:ctx.player});
+        return ({mapa:mapa,cartas:cartas,mazo:mazo,players:ctx.player.state,
+            reglas:{cartasElegidasPorTurno:cartasElegidasPorTurno,cartasPorRonda:cartasPorRonda} });
     },
 
     phases : {
@@ -145,31 +179,47 @@ const RabbitEmpire : Game = {
             // start:true,
             //nada
         },
-        draftear:{            
+        predraftear:{      
             start:true,
+            next:'draftear',
+
+            endIf:(G:IState, ctx:ICtx) => {
+                const pdata = ctx.player;
+                const mazo = G.mazo;
+                ctx.playOrder.forEach((jug,index)=>{
+                    const jugState = pdata.state[jug];
+                    jugState.mano = mazo.splice(0, cartasPorRonda);
+                    pdata.state[jug] = jugState;
+                });
+                return true;
+            },
+        },
+        draftear:{
+            onBegin: (G:IState, ctx:ICtx) => {
+                console.log('draft begin');
+                // ctx.events.setActivePlayers({ all:'draftear' });
+            },
 
             turn:{
-                
-                onBegin: (G, ctx:Ctx) => {
-                    if(ctx.events && ctx.events.setActivePlayers) {
-                        ctx.events.setActivePlayers({ all:'draftear', });
-                        const pdata : PlayerAPI = ctx.player;
-                        const mazo : number[] = G.mazo;
-                        ctx.playOrder.forEach((jug,index)=>{
-                            const jugState:Jugador = pdata.state[jug];
-                            jugState.mano = mazo.splice(0, cartasPorRonda);
-                            pdata.state[jug] = jugState;
-                        });
-                    }
-                },
-
+                activePlayers: {all:'draftear'},
                 stages:{
                     draftear:{
                         moves: {accionElegirCartas,accionSignal},
                     },
-                    revelar:{},
-                }
-            }
+                },
+                // endIf: (G:IState, ctx:ICtx) => ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno),
+                endIf: ()=>true,
+            },
+            
+            endIf: (G:IState, ctx:ICtx) => ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno),
+            // endIf: ()=>true,
+
+            next:'revelar',
+        },
+        revelar:{
+            endIf: faseRevelar,
+            // endIf:()=>true,
+            next:'draftear',
         },
         puntuar:{},
     },

@@ -1,10 +1,43 @@
+.tablero {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+@media screen and (min-aspect-ratio: 1/1) {
+  .tablero {
+    flex-direction: row;
+  }
+}
+
+.mano {
+  flex-grow: 1;
+}
+.carta.elegida {
+  font-weight: bolder;
+}
+
 .mapa {
+  --mapa-rot: 45deg;
+  transform-style: preserve-3d;
+  transform: perspective(200vmin) rotateX(var(--mapa-rot));
+
+  overflow-x: hidden;
+  overflow-y: hidden;
+  
+  flex-grow: 0;
+  flex-shrink: 1;
+  overflow: scroll;
+  scrollbar-width: 0;
   --cant-casilleros: 3;
   margin: 0px;
   padding: 0px;
   --tam-casillero: calc(100vmin / var(--cant-casilleros));
   display: flex;
   flex-direction: column;
+}
+.mapa * {  
+  transform-style: preserve-3d;
 }
 
 .fila-casilleros {
@@ -23,13 +56,29 @@
   height: var(--tam-casillero);
 }
 .casillero > img {
+  transform: perspective(20vmin) rotateX( calc(-0.5 * var(--mapa-rot)) );
+
   position: absolute;
   top:0;
   width: 100%;
   height: 100%;
 }
-.brillo {
-  opacity: 0.5;
+.casillero > img:first-child {
+  transform: rotateX(0);
+}
+.casillero.brillo::after {
+  content:'';
+  border: 1vmin solid;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  box-sizing: border-box;
+}
+.casillero.brillo:hover::after {
+  border-color: white;
+}
+.casillero.brillo.elegida::after {
+  border-color: red;
 }
 
 #root >div >div {

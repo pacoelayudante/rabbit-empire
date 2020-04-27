@@ -1,45 +1,60 @@
-import React, {useState} from 'react';
-import { Ctx, State, MoveMap } from 'boardgame.io/src/types';
-import { Territorio, TipoTerritorio, Ficha, TipoFicha, Jugador, Carta, TipoCarta } from './tipos';
+import React, { useState } from 'react';
+import { Ctx, State, MoveMap, PlayerID } from 'boardgame.io/src/types';
+import { ITerritorio, TipoTerritorio, IState, TipoFicha, IJugador, ICarta, TipoCarta, ICtx } from './tipos';
 
-const imgCasilleros = {
-    [TipoTerritorio.Bosque]: require('./imagenes/terrenos/bosque.png'),
-    [TipoTerritorio.Granja]: require('./imagenes/terrenos/granja.png'),
-    [TipoTerritorio.Lago]: require('./imagenes/terrenos/lago.png'),
-    [TipoTerritorio.Montaña]: require('./imagenes/terrenos/montania.png'),
-    [TipoTerritorio.Pradera]: require('./imagenes/terrenos/pradera.png'),
-    [TipoTerritorio.PuebloInicial]: require('./imagenes/terrenos/pueblo.png'),
-};
-const imgCastillos = [null,require('./imagenes/terrenos/castillo1.png')
-    ,require('./imagenes/terrenos/castillo2.png'),require('./imagenes/terrenos/castillo3.png')];
-
-const FichaEnTablero = ({territorio}) => {
-    let ficha : Ficha = territorio.ficha;
-    let imagen = null;
-    if (ficha.tipo === TipoFicha.Ciudad && ficha.torres) {
-        imagen = imgCastillos[ficha.torres];
-    }
-    return (<img src={imagen} alt={ficha.tipo}/>);
+interface IProp {
+    G: IState,
+    ctx: Ctx,
+    moves: MoveMap,
+    playerID?: PlayerID,
 }
 
-const Mapa = ({G,moves,playerID}):React.FC<State,MoveMap,string> => {
-    const jug : Jugador = G.players.state[playerID];
-    const mapa : Territorio[][] = G.mapa;
-    const filas : number = mapa.length;
+const imgConejos = [require('./imagenes/conejo_celeste.png'),
+    require('./imagenes/conejo_naranja.png'),require('./imagenes/conejo_verde.png')]
+const imgCasilleros = {
+    [TipoTerritorio.Bosque]: require('./imagenes/bosque.png'),
+    [TipoTerritorio.Granja]: require('./imagenes/granja.png'),
+    [TipoTerritorio.Lago]: require('./imagenes/lago.png'),
+    [TipoTerritorio.Montaña]: require('./imagenes/montania.png'),
+    [TipoTerritorio.Pradera]: require('./imagenes/pradera.png'),
+    [TipoTerritorio.PuebloInicial]: require('./imagenes/pueblo.png'),
+};
+const imgCastillos = [null, require('./imagenes/castillo1.png')
+    , require('./imagenes/castillo2.png'), require('./imagenes/castillo3.png')];
 
-    let brillos = jug.mano.map<Carta>(carta=>G.cartas[carta]).filter(carta=>carta.tipo === TipoCarta.Territorio)
-        .map(carta=>carta.territorio?.indice);
+const FichaEnTablero = ({ territorio }: ({ territorio: ITerritorio })) => {
+    const ficha = territorio.ficha;
+    let imagen = null;
+    if (ficha && ficha.tipo === TipoFicha.Ciudad && ficha.torres) {
+        imagen = imgCastillos[ficha.torres];
+    }
+    return (<img src={imagen} alt={ficha?.tipo} />);
+}
+
+const Mapa: React.FC<IProp> = ({ G, ctx, elegirCarta, cartasPorElegir }) => {
+    const jug = G.players[ctx.playerID || 0];
+    const mapa = G.mapa;
+    const filas = mapa.length;
+
+    let cartaEnMano = jug.mano.map(carta => G.cartas[carta]).filter(carta => carta.tipo === TipoCarta.Territorio)
+        .map(carta => carta.territorio?.indice);
     // console.log(moves);
-    const classBrillo = 'brillo';
+    const classBrillo = 'brillo ';
+    const classElegida = 'elegida';
 
     let grillaMapa = mapa.map(
-        (fila,y) => {
+        (fila, y) => {
             let filaCasilleros = fila.map(
                 casillero => {
-                    return (<div key={casillero.x} className={'casillero '+(brillos.includes(casillero.indice)&&classBrillo)}>
-                            <img alt={casillero.tipo} src={imgCasilleros[casillero.tipo]} />
-                            {casillero.ficha && <FichaEnTablero territorio={casillero} />}
-                        </div>);
+                    const estaEnMano = cartaEnMano.includes(casillero.indice);
+                    const elegida = cartasPorElegir.includes(casillero.indice);
+                    const click = estaEnMano ? ()=>elegirCarta(casillero.indice) : ()=>{};
+                    return (<div key={casillero.x} onClick={click}
+                        className={'casillero ' + (estaEnMano?classBrillo:'') + (elegida?classElegida:'')}>
+                        <img alt={casillero.tipo} src={imgCasilleros[casillero.tipo]} />
+                        {casillero.ficha && <FichaEnTablero territorio={casillero} />}
+                        {casillero.dueño && (<img alt={casillero.dueño} src={imgConejos[ctx.playOrder.indexOf(casillero.dueño)]} />)}
+                    </div>);
                 }
             )
             return (<div className='fila-casilleros' key={y}>{filaCasilleros}</div>);
@@ -47,51 +62,53 @@ const Mapa = ({G,moves,playerID}):React.FC<State,MoveMap,string> => {
     );
 
     return (
-        <div className='mapa' onClick={moves.accionSignal} style={{'--cant-casilleros':filas}}>
+        <div className='mapa' style={{ '--cant-casilleros': filas }}>
             {grillaMapa}
         </div>
     );
 };
-const Mano = ({G,ctx,moves,playerID}):React.FC<State,Ctx,MoveMap,string> =>{  
-    // const pdata : PlayerAPI = ctx.player;
-    // const jug : Jugador = pdata.state[ctx.playerID];
-    // console.log(pdata);
-    // console.log(jug);
-    const mano : number[] = G.players.state[playerID].mano;
-    const manoRend = mano.map(cadaCarta => <div key={cadaCarta}>{G.cartas[cadaCarta].nombre} ({cadaCarta}-{G.cartas[cadaCarta].tipo})</div>);
+const Mano = ({ G, ctx, moves, cartasPorElegir }: IProp) => {
+    const jug = G.players[ctx.playerID || 0];
+    const mano: number[] = jug.mano;
+    const manoRend = mano.map(cadaCarta => <div key={cadaCarta} className={'carta '+(cartasPorElegir.includes(cadaCarta)?'elegida':'')}>
+        {G.cartas[cadaCarta].nombre} ({cadaCarta}-{G.cartas[cadaCarta].tipo})</div>);
+    
+    const confirmar = ()=>{
+        moves.accionElegirCartas(cartasPorElegir);
+    };
+    const cancelar = ()=>{
+        moves.accionElegirCartas(null);
+    };
 
-    return (<div>
+    return (<div className='mano'>
         {manoRend}
+        <button onClick={confirmar} disabled={G.reglas.cartasElegidasPorTurno!==cartasPorElegir.length}>Confirmar</button>
+        <button onClick={cancelar} disabled={jug.cartasElegidas.length!==G.reglas.cartasElegidasPorTurno}>Cancelar</button>
     </div>);
 }
 
-const Tablero = ({G,ctx,moves,playerID}):React.FC<State,Ctx,MoveMap,string> =>{
-    const [cartasElegidas,setCartasElegidas] = useState<number[]>([]);
-    // let mapa : Territorio[][] = G.mapa;
-    // let filas : number = mapa.length;
-    // // console.log(moves);
+const Tablero = ({ G, ctx, moves, playerID }: IProp) => {
+    const [cartasPorElegir, setCartasPorElegir] = useState<number[]>([]);
+    if (playerID) ctx.playerID = playerID;
+    const mano = G.players[playerID||0].mano;
 
-    // let grillaMapa = mapa.map(
-    //     (fila,y) => {
-    //         let filaCasilleros = fila.map(
-    //             casillero => {
-    //                 return (<div key={casillero.x} className='casillero'>
-    //                         <img alt={casillero.tipo} src={imgCasilleros[casillero.tipo]} />
-    //                         {casillero.ficha && <FichaEnTablero territorio={casillero} />}
-    //                     </div>);
-    //             }
-    //         )
-    //         return (<div className='fila-casilleros' key={y}>{filaCasilleros}</div>);
-    //     }
-    // );
+    const elegirCarta = (indice: number) => {
+        if (!mano.includes(indice)) return;
+        if (cartasPorElegir.includes(indice)) {
+            setCartasPorElegir(cartasPorElegir.filter(carta => carta !== indice));
+        }
+        else {
+            if (cartasPorElegir.length >= G.reglas.cartasElegidasPorTurno) {
+                cartasPorElegir.pop();
+            }
+            setCartasPorElegir([indice,...cartasPorElegir]);
+        }
+    };
 
     return (
-        // <div className='mapa' onClick={moves.accionSignal} style={{'--cant-casilleros':filas}}>
-        //     {grillaMapa}
-        // </div>
         <div className='tablero'>
-            <Mapa G={G} moves={moves} playerID={playerID}/>
-            <Mano G={G} ctx={ctx} moves={moves} playerID={playerID}/>
+            <Mapa G={G} ctx={ctx} elegirCarta={elegirCarta} cartasPorElegir={cartasPorElegir}/>
+            <Mano G={G} ctx={ctx} moves={moves} cartasPorElegir={cartasPorElegir} />
         </div>
     );
 };
