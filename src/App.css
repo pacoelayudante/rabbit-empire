@@ -12,6 +12,7 @@
 }
 
 .mano, .items {
+  flex-basis: 50%;
   flex-grow: 1;
   box-sizing: border-box;
   border: 1px dashed black;

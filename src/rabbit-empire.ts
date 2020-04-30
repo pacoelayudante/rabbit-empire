@@ -151,19 +151,29 @@ const playerSetup = (playerID:PlayerID):IJugador => {
     });
 };
 
+const accionTerminar = (G:IState,ctx:ICtx,terminar:boolean) => {
+    if (!ctx.playerID) {
+        console.warn(`ctx.playerID = ${ctx.playerID} - esto no puede suceder`);
+        console.log(ctx);
+        return;
+    }
+    const jug = ctx.player.state[ctx.playerID];
+    jug.terminado = terminar;
+    ctx.player.state[ctx.playerID] = jug;
+};
+
 const accionElegirCartas = (G:IState,ctx:ICtx,cartas:number[])=>{
     if (!ctx.playerID) {
         console.warn(`ctx.playerID = ${ctx.playerID} - esto no puede suceder`);
         console.log(ctx);
         return;
     }
-    const pdata = ctx.player;
-    const jug = pdata.state[ctx.playerID];
+    const jug = ctx.player.state[ctx.playerID];
 
     if (cartas == null) {
         //cancelar
         jug.cartasElegidas = [];
-        pdata.state[ctx.playerID] = jug;
+        ctx.player.state[ctx.playerID] = jug;
         return;
     }
     //cartas es un array
@@ -176,36 +186,34 @@ const accionElegirCartas = (G:IState,ctx:ICtx,cartas:number[])=>{
     if (cartas.some(cada=>cartas.length !== cartas.filter(filtrada=>filtrada!==cada).length+1 )) return;
 
     jug.cartasElegidas = cartas;
-    pdata.state[ctx.playerID] = jug;
+    ctx.player.state[ctx.playerID] = jug;
 };
 const accionSignal = (G:IState,ctx:Ctx)=>{
     console.log('playerID ' + ctx.playerID); // SI FUNCA PERO NO EN DEBUG
     console.log('currentPlayer ' + ctx.currentPlayer);
 }
 
-const faseRevelar = (G:IState,ctx:ICtx)=>{
-    console.log('revelar');
-    const newJugState = ctx.playOrder.map(cada=>{
-        const jug = ctx.player.state[cada];
-        jug.mano = jug.mano.filter(carta=>!jug.cartasElegidas.includes(carta));
-        jug.cartasElegidas.forEach(elegida=>revelarCarta(G,jug,G.cartas[elegida]));
-        jug.cartasApropiadas = [...jug.cartasApropiadas,...jug.cartasElegidas];
-        jug.cartasElegidas = [];
-        return jug;
-    });
-    const manos = newJugState.map(jug=>jug.mano);
-    newJugState.forEach((jug,indice) => {
-        jug.mano = manos[(indice+1)%manos.length];
-        ctx.player.state[jug.id] = jug;
-    });
-
-    if ( newJugState.every(jug=>jug.mano.length===0) ){
-        ctx.events.setPhase('ubicar');
-        return false;
+const finDeTurnoRevelar = (G:IState,ctx:ICtx)=>{
+    if (ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno)) {
+        console.log('revelar');
+        const newJugState = ctx.playOrder.map(cada=>{
+            const jug = ctx.player.state[cada];
+            jug.mano = jug.mano.filter(carta=>!jug.cartasElegidas.includes(carta));
+            jug.cartasElegidas.forEach(elegida=>revelarCarta(G,jug,G.cartas[elegida]));
+            jug.cartasApropiadas = [...jug.cartasApropiadas,...jug.cartasElegidas];
+            jug.cartasElegidas = [];
+            return jug;
+        });
+        const manos = newJugState.map(jug=>jug.mano);
+        newJugState.forEach((jug,indice) => {
+            jug.mano = manos[(indice+1)%manos.length];
+            ctx.player.state[jug.id] = jug;
+        });
+        return true;
     }
-
-    return true;
+    else return false;
 }
+
 const revelarCarta = (G:IState,jug:IJugador,carta:ICarta)=>{
     if(carta.territorio) revelarTerritorio(G,jug,carta.territorio);
     else if (carta.item) {
@@ -247,7 +255,7 @@ const RabbitEmpire : Game<IState,ICtx> = {
             // start:true,
             //nada
         },
-        predraftear:{      
+        robar:{      
             start:true,
             next:'draftear',
 
@@ -257,17 +265,13 @@ const RabbitEmpire : Game<IState,ICtx> = {
                 ctx.playOrder.forEach((jug,index)=>{
                     const jugState = pdata.state[jug];
                     jugState.mano = mazo.splice(0, cartasPorRonda);
+                    jugState.terminado = false;
                     pdata.state[jug] = jugState;
                 });
                 return true;
             },
         },
         draftear:{
-            onBegin: (G:IState, ctx:ICtx) => {
-                console.log('draft begin');
-                // ctx.events.setActivePlayers({ all:'draftear' });
-            },
-
             turn:{
                 activePlayers: {all:'draftear'},
                 stages:{
@@ -275,30 +279,24 @@ const RabbitEmpire : Game<IState,ICtx> = {
                         moves: {accionElegirCartas,accionSignal},
                     },
                 },
-                // endIf: (G:IState, ctx:ICtx) => ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno),
-                endIf: ()=>true,
+                endIf: finDeTurnoRevelar,
             },
             
-            endIf: (G:IState, ctx:ICtx) => ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno),
-            // endIf: ()=>true,
+            endIf: (G:IState, ctx:ICtx)=> ctx.playOrder.some(pid=>ctx.player.state[pid].mano.length===0),
 
-            next:'revelar',
-        },
-        revelar:{
-            endIf: faseRevelar,
-            // endIf:()=>true,
-            next:'draftear',
+            next:'ubicar',
         },
         ubicar:{
-            next:'draftear',
             turn:{
                 activePlayers: {all:'ubicar'},
                 stages:{
                     ubicar:{
-
+                        moves:{accionTerminar},
                     }
                 }
-            }
+            },
+            endIf: (G:IState, ctx:ICtx)=> ctx.playOrder.every(pid=>ctx.player.state[pid].terminado),
+            next:'robar',
         },
         puntuar:{},
     },

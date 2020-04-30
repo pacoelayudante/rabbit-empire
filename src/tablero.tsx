@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { Ctx, State, MoveMap, PlayerID } from 'boardgame.io';
 import { ITerritorio, TipoTerritorio, IState, TipoItem, IJugador, ICarta, TipoCarta, ICtx, IFicha, TipoRecurso } from './tipos';
 
@@ -148,13 +148,19 @@ const ItemEnMano = ({G,ctx,item}:{G:IState,ctx:ICtx,item:IFicha}) => {
     else inner = (<span>{item.tipo} {item.color} {item.recurso} {item.prioridad}</span>);
     return (<div className={'item '+item.tipo}>{inner}</div>);
 }
-const Items = ({G,ctx}:{G:IState,ctx:ICtx})=>{
+const Items = ({G,ctx,moves}:{G:IState,ctx:ICtx,moves:MoveMap})=>{
     const jug = G.players[ctx.playerID || 0];
     const items = jug.itemsEnMano;
     const itemsRend = items.map(cadaItem=><ItemEnMano key={cadaItem.indice} G={G} ctx={ctx} item={cadaItem}/>);
+    
+    const ubicar = ctx.phase === 'ubicar';
+    const changeTerminar = (event:ChangeEvent<HTMLInputElement>)=>{
+        moves.accionTerminar(event.target.checked);
+    };
 
     return (<div className='items'>
         {itemsRend}
+        {ubicar && <input className='terminar' onChange={changeTerminar} checked={jug.terminado} type='checkbox'/>}
     </div>);
 };
 
@@ -182,7 +188,7 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap
             <Mapa G={G} ctx={ctx} elegirCarta={elegirCarta} cartasPorElegir={cartasPorElegir}/>
             <div className='jugador'>
                 <Mano G={G} ctx={ctx} elegirCarta={elegirCarta} moves={moves} cartasPorElegir={cartasPorElegir} />
-                <Items G={G} ctx={ctx} />
+                <Items G={G} ctx={ctx} moves={moves}/>
             </div>
         </div>
     );
