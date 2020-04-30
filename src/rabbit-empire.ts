@@ -1,6 +1,6 @@
 import { PluginPlayer } from 'boardgame.io/plugins';
 import { Game, Ctx, PlayerID } from 'boardgame.io';
-import { TipoRecurso, TipoTerritorio, ITerritorio, TipoFicha, TipoCarta, ICarta, IJugador, IState, ICtx } from './tipos';
+import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, IJugador, IState, ICtx, IFicha } from './tipos';
 
 const cartasPorRonda : number = 3;//10
 const cartasElegidasPorTurno : number = 1;//2
@@ -9,32 +9,72 @@ const cantCastillos : number[] = [9,9,3];
 const cantCampamentos : number = 6;
 const cantTorres : number = 3;
 const cantCartasRecurso = [
+    { tipo:TipoRecurso.Mercado, cant:2 },//comodin
     { tipo:TipoRecurso.Zanahoria, cant:1 },
     { tipo:TipoRecurso.Madera, cant:1 },
     { tipo:TipoRecurso.Pescado, cant:1 },
-    { tipo:TipoRecurso.Comodin, cant:2 },
+    { tipo:TipoRecurso.Perla, cant:1 },
+    { tipo:TipoRecurso.Hongo, cant:1 },
+    { tipo:TipoRecurso.Especia, cant:1 },
+    { tipo:TipoRecurso.Diamante, cant:1 },
+    { tipo:TipoRecurso.Oro, cant:1 },
+    { tipo:TipoRecurso.Cobre, cant:1 },
+    { tipo:TipoRecurso.Metal, cant:1 },
 ]
 
+const recursosBaseDeRecursos : any = {
+    [TipoTerritorio.Bosque] : TipoRecurso.Madera,
+    [TipoTerritorio.Granja] : TipoRecurso.Zanahoria,
+    [TipoTerritorio.Lago] : TipoRecurso.Pescado,
+};
+const requerimentosDeLujo = {
+    [TipoRecurso.Perla] : TipoTerritorio.Lago,
+    [TipoRecurso.Hongo] : TipoTerritorio.Bosque,
+    [TipoRecurso.Especia] : TipoTerritorio.Granja,
+    [TipoRecurso.Diamante] : TipoTerritorio.Montaña,
+    [TipoRecurso.Oro] : TipoTerritorio.Montaña,
+    [TipoRecurso.Cobre] : TipoTerritorio.Montaña,
+    [TipoRecurso.Metal] : TipoTerritorio.Montaña
+}
+
 const premapa : string[] = [
-    // 'ccc cc',
-    // 'ccc cc',
-    // 'ccc cc',
+    'ccc cc',
+    'ccc cc',
+    'ccc cc',
     
-    // 'ccc cc',
-    // 'ccc cc',
-    'cpgb mblp cc',
-    'cpgb mblp cc',
-    'cpgb mblp cc',
-    'cpgb mblp cc',
+    'ccc cc',
+    'ccc cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
     
-    'cpgb mblp cc',
-    'cpgb mblp cc',
-    'cpgb mblp cc',
-    'cpgb mblp cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
     
-    'cpgb mblp cc',
-    'cpgb mblp cc',
-]
+    // 'cpgb mblp cc',
+    // 'cpgb mblp cc',
+].map(fila=>fila.replace(/[^cpgbml]/gi,''));//trimear mapa
+
+const ancho = premapa[0].length;
+const alto = premapa.length;
+const vecindadesMapper = (indice:number):number[] => {
+    return [
+        indice-ancho, // arriba
+        (indice%ancho+1)<ancho?+1:0, // derecha
+        indice+ancho, // abajo
+        (indice%ancho>0)?-1:0, // izquierda
+    ];
+};
+
+const fichaUbicable = (jug:IJugador, ficha:IFicha, territorio:ITerritorio):boolean=>{
+    if (!jug.itemsEnMano.includes(ficha) || territorio.dueño !== jug.id || territorio.ficha) return false;
+    if (ficha.torres && ficha.torres >= 3 && territorio.tipo !== TipoTerritorio.Montaña) return false;
+    if (ficha.recurso && requerimentosDeLujo[ficha.recurso] && territorio.tipo!==requerimentosDeLujo[ficha.recurso]) return false;
+    return true;
+}
 
 const mapeoTerritoriosLetra : any = {
     'c' : TipoTerritorio.PuebloInicial,
@@ -48,10 +88,13 @@ const mapeoTerritoriosLetra : any = {
 const letraTerritorio = (indice:number,x:number,y:number,letra:string):ITerritorio => {
     letra = ['c','p','g','b','m','l'][Math.floor(Math.random()*6.0)];
     const territorio : ITerritorio = {
-        indice:indice,x:x,y:y,tipo:mapeoTerritoriosLetra[letra],
+        indice:indice,x:x,y:y,tipo:mapeoTerritoriosLetra[letra],vecindad:vecindadesMapper(indice),
     };
     if (territorio.tipo === TipoTerritorio.PuebloInicial) {
-        territorio.ficha = {tipo:TipoFicha.Ciudad,torres:1};
+        territorio.ficha = {indice:-indice,tipo:TipoItem.Castillo,torres:1};
+    }
+    if ( recursosBaseDeRecursos[territorio.tipo] ) {
+        territorio.recurso = recursosBaseDeRecursos[territorio.tipo];
     }
     return territorio;
 }
@@ -66,28 +109,31 @@ const crearCartas = (territorios:ITerritorio[]):ICarta[] => {
             territorio:territorio}),
     );
 
-    // const cartasCastillos = cantCastillos.flatMap(
-    //     (cants,cantTorres):Carta[]=>new Array(cants).fill('').map(
-    //         ():Carta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'ciudad', item:{tipo:TipoFicha.Ciudad,torres:(cantTorres+1)}})
-    //     )
-    // );
+    const cartasCastillos = cantCastillos.flatMap(
+        (cants,cantTorres):ICarta[]=>new Array(cants).fill('').map(
+            ():ICarta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'ciudad',
+                item:{indice:indiceDeCarta,tipo:TipoItem.Castillo,torres:(cantTorres+1)}})
+        )
+    );
 
-    // const cartasCamps = new Array(cantCampamentos).fill('').map(
-    //     (nada,indice):Carta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'campamento', item:{tipo:TipoFicha.Campamento,prioridad:indice}})
-    // );
+    const cartasCamps = new Array(cantCampamentos).fill('').map(
+        (nada,indice):ICarta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'campamento',
+            item:{indice:indiceDeCarta,tipo:TipoItem.Campamento,prioridad:indice}})
+    );
     
-    // const cartasTorres = new Array(cantTorres*2).fill('').map(
-    //     (nada,indice):Carta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'torre celestial', item:{tipo:TipoFicha.TorreCelestial,color:indice%cantTorres}})
-    // );
+    const cartasTorres = new Array(cantTorres*2).fill('').map(
+        (nada,indice):ICarta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'torre celestial',
+            item:{indice:indiceDeCarta,tipo:TipoItem.TorreCelestial,color:indice%cantTorres}})
+    );
 
-    // const cartasRecursos = cantCartasRecurso.flatMap(
-    //     (combo):Carta[]=>new Array(combo.cant).fill('').map(
-    //         ():Carta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'recurso', item:{tipo:TipoFicha.Recurso, recurso:combo.tipo}})
-    //     )
-    // );
+    const cartasRecursos = cantCartasRecurso.flatMap(
+        (combo):ICarta[]=>new Array(combo.cant).fill('').map(
+            ():ICarta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'recurso',
+                item:{indice:indiceDeCarta,tipo:TipoItem.Recurso, recurso:combo.tipo}})
+        )
+    );
 
-    // return [...cartasTerritorios, ...cartasCastillos,...cartasCamps,...cartasTorres, ...cartasRecursos];
-    return cartasTerritorios;
+    return [...cartasTerritorios, ...cartasCastillos,...cartasCamps,...cartasTorres, ...cartasRecursos];
 }
 
 const playerSetup = (playerID:PlayerID):IJugador => {
@@ -98,13 +144,19 @@ const playerSetup = (playerID:PlayerID):IJugador => {
         cartasApropiadas:[],
         cartasElegidas:[],
         ptsPorTurno:[],
-        items:[],
+        itemsEnMano:[],
         ptsPorPegaminos:0,
+        ptsPorTesoros:0,
+        terminado:false,
     });
 };
 
 const accionElegirCartas = (G:IState,ctx:ICtx,cartas:number[])=>{
-    if (!ctx.playerID) return;
+    if (!ctx.playerID) {
+        console.warn(`ctx.playerID = ${ctx.playerID} - esto no puede suceder`);
+        console.log(ctx);
+        return;
+    }
     const pdata = ctx.player;
     const jug = pdata.state[ctx.playerID];
 
@@ -136,10 +188,7 @@ const faseRevelar = (G:IState,ctx:ICtx)=>{
     const newJugState = ctx.playOrder.map(cada=>{
         const jug = ctx.player.state[cada];
         jug.mano = jug.mano.filter(carta=>!jug.cartasElegidas.includes(carta));
-        jug.cartasElegidas.forEach(elegida=>{
-            const carta = G.cartas[elegida];
-            if(carta.territorio) revelarTerritorio(G,jug,carta.territorio);
-        });
+        jug.cartasElegidas.forEach(elegida=>revelarCarta(G,jug,G.cartas[elegida]));
         jug.cartasApropiadas = [...jug.cartasApropiadas,...jug.cartasElegidas];
         jug.cartasElegidas = [];
         return jug;
@@ -150,7 +199,23 @@ const faseRevelar = (G:IState,ctx:ICtx)=>{
         ctx.player.state[jug.id] = jug;
     });
 
+    if ( newJugState.every(jug=>jug.mano.length===0) ){
+        ctx.events.setPhase('ubicar');
+        return false;
+    }
+
     return true;
+}
+const revelarCarta = (G:IState,jug:IJugador,carta:ICarta)=>{
+    if(carta.territorio) revelarTerritorio(G,jug,carta.territorio);
+    else if (carta.item) {
+        if (carta.item.tipo === TipoItem.Provisiones) {
+            // PROVISIONES!
+        }
+        else {
+            jug.itemsEnMano = [...jug.itemsEnMano,carta.item];
+        }
+    }
 }
 
 const revelarTerritorio = (G:IState,jug:IJugador,territorio:ITerritorio)=>{
@@ -164,10 +229,13 @@ const RabbitEmpire : Game<IState,ICtx> = {
     plugins : [PluginPlayer({setup:playerSetup})],
 
     setup : (ctx:ICtx, setupData):IState => {
-        const trimpremapa = premapa.map(fila=>fila.replace(/[^cpgbml]/gi,''));        
+        const trimpremapa = premapa;        
         let indiceT : number = 0;
         const mapa = trimpremapa.map( (fila,y)=> fila.split('').map((letra,x)=>letraTerritorio(indiceT++,x,y,letra)) );
-        const cartas = crearCartas(mapa.flat());
+        const flatMap : ITerritorio[] = [];
+        mapa.forEach(subMapa => flatMap.push(...subMapa));
+        // const cartas = crearCartas(mapa.flat());
+        const cartas = crearCartas(flatMap);
         const mazo = ctx.random.Shuffle( cartas.map(carta=>carta.indice) );
 
         return ({mapa:mapa,cartas:cartas,mazo:mazo,players:ctx.player.state,
@@ -220,6 +288,17 @@ const RabbitEmpire : Game<IState,ICtx> = {
             endIf: faseRevelar,
             // endIf:()=>true,
             next:'draftear',
+        },
+        ubicar:{
+            next:'draftear',
+            turn:{
+                activePlayers: {all:'ubicar'},
+                stages:{
+                    ubicar:{
+
+                    }
+                }
+            }
         },
         puntuar:{},
     },

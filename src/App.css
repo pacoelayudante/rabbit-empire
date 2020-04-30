@@ -4,23 +4,39 @@
   width: 100vw;
   height: 100vh;
 }
-@media screen and (min-aspect-ratio: 1/1) {
-  .tablero {
-    flex-direction: row;
-  }
+
+.jugador {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: row;
 }
 
-.mano {
+.mano, .items {
   flex-grow: 1;
+  box-sizing: border-box;
+  border: 1px dashed black;
+}
+.items {
+  display: flex;
+  flex-direction: column-reverse;
 }
 .carta.elegida {
   font-weight: bolder;
 }
 
+@media screen and (min-aspect-ratio: 1/1) {
+  .tablero {
+    flex-direction: row;
+  }
+  .jugador {
+    flex-direction: column;
+  }
+}
+
 .mapa {
-  --mapa-rot: 45deg;
+  /* --mapa-rot: 45deg;
   transform-style: preserve-3d;
-  transform: perspective(200vmin) rotateX(var(--mapa-rot));
+  transform: perspective(200vmin) rotateX(var(--mapa-rot)); */
 
   overflow-x: hidden;
   overflow-y: hidden;
@@ -36,9 +52,9 @@
   display: flex;
   flex-direction: column;
 }
-.mapa * {  
+/* .mapa * {  
   transform-style: preserve-3d;
-}
+} */
 
 .fila-casilleros {
   margin: inherit;
@@ -56,33 +72,41 @@
   height: var(--tam-casillero);
 }
 .casillero > img {
-  transform: perspective(20vmin) rotateX( calc(-0.5 * var(--mapa-rot)) );
+  /* transform: perspective(20vmin) rotateX( calc(-0.5 * var(--mapa-rot)) ); */
 
   position: absolute;
   top:0;
   width: 100%;
   height: 100%;
 }
-.casillero > img:first-child {
+/* .casillero > img:first-child {
   transform: rotateX(0);
-}
+} */
 .casillero.brillo::after {
   content:'';
-  border: 1vmin solid;
   width: 100%;
   height: 100%;
   position: absolute;
+}
+.casillero.brillo::after, .mano>.carta:not(.territorio)>* {
+  border: 1vmin solid;
   box-sizing: border-box;
 }
-.casillero.brillo:hover::after {
+.casillero.brillo:hover::after, .mano>.carta>:hover {
   border-color: white;
 }
-.casillero.brillo.elegida::after {
+.casillero.brillo.elegida::after, .mano>.carta.elegida>* {
   border-color: red;
+}
+.casillero.brillo.confirmada::after, .mano>.carta.confirmada>* {
+  border-color: blueviolet;
+}
+.mano>.carta.territorio {
+  
 }
 
 #root >div >div {
-  display: none;
+  /* display: none; */
   margin-bottom: 10px;
 }
 #root >div >div:first-child {

@@ -1,4 +1,4 @@
-import { Ctx, PlayerID } from 'boardgame.io/src/types';
+import { Ctx, PlayerID } from 'boardgame.io';
 import { RandomAPI } from 'boardgame.io/dist/types/src/plugins/plugin-random';
 import { PlayerAPI } from 'boardgame.io/dist/types/src/plugins/plugin-player';
 import { EventsAPI } from 'boardgame.io/dist/types/src/plugins/events/events';
@@ -17,7 +17,14 @@ export enum TipoRecurso {
     Zanahoria = 'zanahoria',
     Madera = 'madera',
     Pescado = 'pescado',
-    Comodin = 'comodin',
+    Perla = 'perla',
+    Hongo = 'hongo',
+    Especia = 'especia',
+    Diamante = 'diamante',
+    Cobre = 'cobre',
+    Oro = 'oro',
+    Metal = 'metal',
+    Mercado = 'mercado',//comodin
 }
 
 export enum TipoCarta {
@@ -27,51 +34,56 @@ export enum TipoCarta {
     Item = 'item',
 }
 
-export enum TipoFicha {
-    Ciudad = 'ciudad',
+export enum TipoItem {
+    Castillo = 'castillo',
     Recurso = 'recurso',
     TorreCelestial = 'torre-celestial',
     Campamento = 'campamento',
+    Provisiones = 'provisiones'
 }
 
 export interface IJugador {
-    id:PlayerID;
-    nombre:string;
+    id:PlayerID,
+    nombre:string,
     mano:number[],
     cartasApropiadas:number[],
     cartasElegidas:number[],
-    items:IFicha[],
-    ptsPorTurno:number[];
-    ptsPorPegaminos:number;
+    itemsEnMano:IFicha[],
+    ptsPorTurno:number[],
+    ptsPorPegaminos:number,
+    ptsPorTesoros:number,
+    terminado:boolean,
 }
 
 export interface ICarta {
-    indice:number;
-    tipo:TipoCarta;
-    nombre:string;
-    territorio?:ITerritorio;
-    pergamino?:string;
-    item?:IFicha;
-    dueño?:IJugador;
+    indice:number,
+    tipo:TipoCarta,
+    nombre:string,
+    territorio?:ITerritorio,
+    pergamino?:string,
+    item?:IFicha,
+    dueño?:IJugador,
 }
 
 export interface IFicha {
-    tipo:TipoFicha;
-    prioridad?:number;
-    color?:number;
-    torres?:number;
-    recurso?:TipoRecurso;
-    dueño?:IJugador;
+    indice:number,
+    tipo:TipoItem,
+    prioridad?:number,
+    color?:number,
+    torres?:number,
+    recurso?:TipoRecurso,
+    dueño?:IJugador,
 }
 
 export interface ITerritorio {
-    indice:number;
-    x:number;
-    y:number;
-    tipo:TipoTerritorio;
-    ficha?:IFicha;
-    dueño?:PlayerID;
-    recurso?:TipoRecurso;
+    indice:number,
+    x:number,
+    y:number,
+    tipo:TipoTerritorio,
+    ficha?:IFicha,
+    dueño?:PlayerID,
+    recurso?:TipoRecurso,
+    vecindad:number[],
 }
 
 export interface IReglas {
