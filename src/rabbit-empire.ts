@@ -2,8 +2,8 @@ import { PluginPlayer } from 'boardgame.io/plugins';
 import { Game, Ctx, PlayerID } from 'boardgame.io';
 import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, IJugador, IState, ICtx, IFicha } from './tipos';
 
-const cartasPorRonda : number = 3;//10
-const cartasElegidasPorTurno : number = 1;//2
+const cartasPorRonda : number = 10
+const cartasElegidasPorTurno : number = 2
 
 const cantCastillos : number[] = [9,9,3];
 const cantCampamentos : number = 6;
@@ -91,7 +91,7 @@ const letraTerritorio = (indice:number,x:number,y:number,letra:string):ITerritor
         indice:indice,x:x,y:y,tipo:mapeoTerritoriosLetra[letra],vecindad:vecindadesMapper(indice),
     };
     if (territorio.tipo === TipoTerritorio.PuebloInicial) {
-        territorio.ficha = {indice:-indice,tipo:TipoItem.Castillo,torres:1};
+        territorio.ficha = {indice:indice,tipo:TipoItem.Castillo,torres:1};
     }
     if ( recursosBaseDeRecursos[territorio.tipo] ) {
         territorio.recurso = recursosBaseDeRecursos[territorio.tipo];
@@ -100,35 +100,35 @@ const letraTerritorio = (indice:number,x:number,y:number,letra:string):ITerritor
 }
 
 const crearCartas = (territorios:ITerritorio[]):ICarta[] => {
-    let indiceDeCarta : number = 0;
+    let indiceDeCarta : number = territorios.length-1;// arranco en -1 porque voy a ir haciendo ++X en vez de X++
     
     const cartasTerritorios = territorios.map(
         (territorio):ICarta=>({
-            indice:(indiceDeCarta++), tipo:TipoCarta.Territorio,
+            indice:territorio.indice, tipo:TipoCarta.Territorio,
             nombre:`territorio ${(territorio.x+1)}-${(territorio.y+1)}`,
-            territorio:territorio}),
+            territorio:territorio.indice}),
     );
 
     const cartasCastillos = cantCastillos.flatMap(
         (cants,cantTorres):ICarta[]=>new Array(cants).fill('').map(
-            ():ICarta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'ciudad',
+            ():ICarta => ({indice:(++indiceDeCarta), tipo:TipoCarta.Item, nombre: 'ciudad',
                 item:{indice:indiceDeCarta,tipo:TipoItem.Castillo,torres:(cantTorres+1)}})
         )
     );
 
     const cartasCamps = new Array(cantCampamentos).fill('').map(
-        (nada,indice):ICarta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'campamento',
+        (nada,indice):ICarta=>({indice:(++indiceDeCarta), tipo:TipoCarta.Item, nombre:'campamento',
             item:{indice:indiceDeCarta,tipo:TipoItem.Campamento,prioridad:indice}})
     );
     
-    const cartasTorres = new Array(cantTorres*2).fill('').map(
-        (nada,indice):ICarta=>({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre:'torre celestial',
-            item:{indice:indiceDeCarta,tipo:TipoItem.TorreCelestial,color:indice%cantTorres}})
+    const cartasTorres = new Array(cantTorres).fill('').map(
+        (nada,indice):ICarta=>({indice:(++indiceDeCarta), tipo:TipoCarta.Item, nombre:'torre celestial',
+            item:{indice:indiceDeCarta,tipo:TipoItem.TorreCelestial,color:indice}})
     );
 
     const cartasRecursos = cantCartasRecurso.flatMap(
         (combo):ICarta[]=>new Array(combo.cant).fill('').map(
-            ():ICarta => ({indice:(indiceDeCarta++), tipo:TipoCarta.Item, nombre: 'recurso',
+            ():ICarta => ({indice:(++indiceDeCarta), tipo:TipoCarta.Item, nombre: 'recurso',
                 item:{indice:indiceDeCarta,tipo:TipoItem.Recurso, recurso:combo.tipo}})
         )
     );
@@ -215,7 +215,7 @@ const finDeTurnoRevelar = (G:IState,ctx:ICtx)=>{
 }
 
 const revelarCarta = (G:IState,jug:IJugador,carta:ICarta)=>{
-    if(carta.territorio) revelarTerritorio(G,jug,carta.territorio);
+    if(carta.territorio) revelarTerritorio(G,jug,G.mapa[Math.floor(carta.territorio/G.mapa.length)][carta.territorio%G.mapa.length]);
     else if (carta.item) {
         if (carta.item.tipo === TipoItem.Provisiones) {
             // PROVISIONES!

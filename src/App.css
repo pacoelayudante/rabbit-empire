@@ -25,6 +25,7 @@
   font-weight: bolder;
 }
 
+
 @media screen and (min-aspect-ratio: 1/1) {
   .tablero {
     flex-direction: row;
@@ -83,23 +84,25 @@
 /* .casillero > img:first-child {
   transform: rotateX(0);
 } */
-.casillero.brillo::after {
+.draftear .casillero.brillo::after {
   content:'';
   width: 100%;
   height: 100%;
   position: absolute;
 }
-.casillero.brillo::after, .mano>.carta:not(.territorio)>* {
+.draftear.casillero.brillo::after,
+.draftear.mano>.carta:not(.territorio)>*,
+.ubicar .items>.item>* {
   border: 1vmin solid;
   box-sizing: border-box;
 }
-.casillero.brillo:hover::after, .mano>.carta>:hover {
+.draftear .casillero.brillo:hover::after, .draftear.mano>.carta>:hover {
   border-color: white;
 }
-.casillero.brillo.elegida::after, .mano>.carta.elegida>* {
+.draftear .casillero.brillo.elegida::after, .draftear.mano>.carta.elegida>* {
   border-color: red;
 }
-.casillero.brillo.confirmada::after, .mano>.carta.confirmada>* {
+.draftear .casillero.brillo.confirmada::after, .draftear.mano>.carta.confirmada>* {
   border-color: blueviolet;
 }
 .mano>.carta.territorio {

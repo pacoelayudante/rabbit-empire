@@ -59,7 +59,7 @@ export interface ICarta {
     indice:number,
     tipo:TipoCarta,
     nombre:string,
-    territorio?:ITerritorio,
+    territorio?:number,
     pergamino?:string,
     item?:IFicha,
     dueño?:IJugador,
