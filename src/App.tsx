@@ -1,18 +1,22 @@
-import React, { ChangeEvent } from 'react';
+import React, { ChangeEvent, useState } from 'react';
 import { Client } from 'boardgame.io/react';
+import { Ctx } from 'boardgame.io';
 import { Local, SocketIO } from 'boardgame.io/multiplayer';
 import RabbitEmpire from './rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 
-// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:2, multiplayer: SocketIO({ server: '192.168.0.7:8000' }), board: Tablero, debug:false });
-const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:2, multiplayer: Local(), board: Tablero, debug:document.location.hash.includes('dbg') });
-// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:3, board: Tablero });
+const cantJugs = 1;
+// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: SocketIO({ server: '192.168.0.7:8000' }), board: Tablero, debug:false });
+const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: Local(), board: Tablero, debug:document.location.hash.includes('dbg') });
+// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, board: Tablero });
 
-const Menu = ()=>{  
+const Menu = ({cambiarPID}:{cambiarPID:(pid:string)=>void})=>{
   const opciones = new Map([
     ['Reset',()=>console.log('No reset for nows')],
+    ...new Array(cantJugs).fill('').map<[string,()=>void]>((ply,ind)=>[('Jugar con '+ind),()=>cambiarPID(ind.toString())])
   ]);
+
   const opcionesRend = Array.from(opciones,([key])=><option key={key} value={key}>{key}</option>);
 
   const seleccionarOpcion = (ev:ChangeEvent<HTMLSelectElement>)=>{
@@ -34,13 +38,9 @@ const Menu = ()=>{
 
 export default () =>
 {
-  const id = (document.location.hash).slice(1).toString();
+  const [PID,cambiarPID] = useState('0');
   return (<div className='app'>
-    {/* <RabbitEmpireClient playerID={id} /> */}
-    <RabbitEmpireClient playerID='0' />
-    <RabbitEmpireClient playerID='1' />
-    {/* <RabbitEmpireClient playerID='2' /> */}
-    <Menu />
+    <RabbitEmpireClient playerID={PID} />
+    <Menu cambiarPID={cambiarPID}/>
   </div>);
 }
-// export default RabbitEmpireClient;

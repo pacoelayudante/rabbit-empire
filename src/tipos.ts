@@ -79,11 +79,19 @@ export interface ITerritorio {
     indice:number,
     x:number,
     y:number,
+    vecindad:number[],
     tipo:TipoTerritorio,
     ficha?:IFicha,
     dueño?:PlayerID,
     recurso?:TipoRecurso,
-    vecindad:number[],
+    indiceFeudo?:number,
+}
+
+export interface IFeudo {
+    territorios:number[],
+    dueño:PlayerID,
+    torres:number,
+    recursos:TipoRecurso[],
 }
 
 export interface IReglas {
@@ -93,6 +101,8 @@ export interface IReglas {
 
 export interface IState {
     mapa:ITerritorio[][],
+    mapaIndexado:{y:number,x:number}[],
+    feudos:IFeudo[],
     mazo:number[],
     cartas:ICarta[],
     players:Record<string,IJugador>,

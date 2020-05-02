@@ -1,6 +1,6 @@
 import { PluginPlayer } from 'boardgame.io/plugins';
 import { Game, Ctx, PlayerID } from 'boardgame.io';
-import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, IJugador, IState, ICtx, IFicha } from './tipos';
+import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, IJugador, IState, ICtx, IFicha, IFeudo } from './tipos';
 
 const cartasPorRonda : number = 10
 const cartasElegidasPorTurno : number = 2
@@ -63,9 +63,9 @@ const alto = premapa.length;
 const vecindadesMapper = (indice:number):number[] => {
     return [
         indice-ancho, // arriba
-        (indice%ancho+1)<ancho?+1:0, // derecha
+        (indice%ancho+1)<ancho?indice+1:-1, // derecha
         indice+ancho, // abajo
-        (indice%ancho>0)?-1:0, // izquierda
+        (indice%ancho>0)?indice-1:-1, // izquierda
     ];
 };
 
@@ -170,31 +170,47 @@ const accionElegirCartas = (G:IState,ctx:ICtx,cartas:number[])=>{
     }
     const jug = ctx.player.state[ctx.playerID];
 
-    if (cartas == null) {
-        //cancelar
-        jug.cartasElegidas = [];
-        ctx.player.state[ctx.playerID] = jug;
-        return;
-    }
+    if (cartas === null) cartas = [];
     //cartas es un array
     //deben ser todos numeros validos
     //debe y la cantidad de cartas correcta
-    if (!cartas.length || cartas.some(cada=>cada===undefined) || cartas.length !== G.reglas.cartasElegidasPorTurno) return;
+    if (cartas.length===undefined || cartas.some(cada=>cada===undefined)) return;
     //debe tenerla en la mano
     if (cartas.some(cada=>!jug.mano.includes(cada))) return;
     //no debe haber duplicadas (esto es asi, filtro las cartas iguales, deberia filtrarse solo una, si misma)
     if (cartas.some(cada=>cartas.length !== cartas.filter(filtrada=>filtrada!==cada).length+1 )) return;
 
-    jug.cartasElegidas = cartas;
+    jug.cartasElegidas = cartas.slice(0,G.reglas.cartasElegidasPorTurno);    
+    jug.terminado = cartas.length === G.reglas.cartasElegidasPorTurno;
     ctx.player.state[ctx.playerID] = jug;
 };
-const accionSignal = (G:IState,ctx:Ctx)=>{
-    console.log('playerID ' + ctx.playerID); // SI FUNCA PERO NO EN DEBUG
-    console.log('currentPlayer ' + ctx.currentPlayer);
+
+const accionUbicar = (G:IState,ctx:ICtx,indiceItem:number, indicesTerritorios:number[]) => {
+    if (!ctx.playerID) {
+        console.warn(`ctx.playerID = ${ctx.playerID} - esto no puede suceder`);
+        console.log(ctx);
+        return;
+    }
+    const mapa = G.mapa;
+    let territorios = indicesTerritorios.map(ind=>G.mapaIndexado[ind]).map(({y,x}:{y:number,x:number})=>mapa[y][x]);
+    if (territorios.some(terr=>terr.ficha || terr.dueño!==ctx.playerID)) return;
+    else {
+        //ubicar ficha y hacer cosas
+        const pj = ctx.player.state[ctx.playerID];
+        const ficha = pj.itemsEnMano[indiceItem];
+        if (ficha) {
+            if (ficha.tipo !== TipoItem.TorreCelestial) territorios = territorios.slice(0,1);
+            territorios.forEach(terr=>terr.ficha=ficha);
+            G.mapa = mapa;
+            pj.itemsEnMano = pj.itemsEnMano.filter((itm,ind)=>ind!==indiceItem);
+            ctx.player.state[ctx.playerID] = pj;
+        }
+    }
 }
 
 const finDeTurnoRevelar = (G:IState,ctx:ICtx)=>{
-    if (ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno)) {
+    if (ctx.playOrder.every(cadaJug=>ctx.player.state[cadaJug].terminado
+            && ctx.player.state[cadaJug].cartasElegidas.length===G.reglas.cartasElegidasPorTurno)) {
         console.log('revelar');
         const newJugState = ctx.playOrder.map(cada=>{
             const jug = ctx.player.state[cada];
@@ -202,6 +218,7 @@ const finDeTurnoRevelar = (G:IState,ctx:ICtx)=>{
             jug.cartasElegidas.forEach(elegida=>revelarCarta(G,jug,G.cartas[elegida]));
             jug.cartasApropiadas = [...jug.cartasApropiadas,...jug.cartasElegidas];
             jug.cartasElegidas = [];
+            jug.terminado = false;
             return jug;
         });
         const manos = newJugState.map(jug=>jug.mano);
@@ -209,13 +226,48 @@ const finDeTurnoRevelar = (G:IState,ctx:ICtx)=>{
             jug.mano = manos[(indice+1)%manos.length];
             ctx.player.state[jug.id] = jug;
         });
+        actualizarFeudos(G);
         return true;
     }
     else return false;
 }
 
+const floodIndiceFeudo = (G:IState,territorio:ITerritorio, indice:number)=>{
+    if (territorio.indiceFeudo !== undefined) return;
+    territorio.indiceFeudo = indice;
+    territorio.vecindad.filter(vecId=>G.mapaIndexado[vecId])//vecinos existen?
+        .map(vecId=>G.mapaIndexado[vecId])//convertir vecino index a {y,x}
+        .map(({y,x})=>G.mapa[y][x])//convertir vecino{y,x} a vecino ITerritorio
+        .filter(vecino=>(vecino?.dueño===territorio.dueño))//vecino comparte dueño
+        .forEach(vecino=>floodIndiceFeudo(G,vecino,indice));
+};
+const actualizarFeudos = (G:IState) => {
+    const feudos:IFeudo[] = [];
+    G.mapaIndexado.forEach(({y,x})=>G.mapa[y][x].indiceFeudo = undefined);
+    G.mapaIndexado.forEach(({y,x})=>{
+        const territorio = G.mapa[y][x];
+        if (territorio.dueño) {
+            if (territorio.indiceFeudo === undefined) {
+                floodIndiceFeudo(G,territorio,feudos.length);
+                if (territorio.indiceFeudo === undefined) return;//innecesario pero para que no joda el error
+            }
+            const indice = territorio.indiceFeudo;
+            if (feudos[indice] === undefined) {
+                territorio.indiceFeudo = feudos.length;
+                feudos[indice] = ( {territorios:[],dueño:territorio.dueño,torres:0,recursos:[]} );
+            }
+            
+            feudos[indice].territorios.push(territorio.indice);
+            feudos[indice].torres += territorio.ficha?.torres || 0;
+            if(territorio.recurso) feudos[indice].recursos.push(territorio.recurso);
+            if(territorio.ficha?.recurso) feudos[indice].recursos.push(territorio.ficha.recurso);
+        }
+    });
+    G.feudos = feudos;
+}
+
 const revelarCarta = (G:IState,jug:IJugador,carta:ICarta)=>{
-    if(carta.territorio) revelarTerritorio(G,jug,G.mapa[Math.floor(carta.territorio/G.mapa.length)][carta.territorio%G.mapa.length]);
+    if(carta.territorio!==undefined) revelarTerritorio(G,jug,G.mapa[G.mapaIndexado[carta.territorio].y][G.mapaIndexado[carta.territorio].x]);
     else if (carta.item) {
         if (carta.item.tipo === TipoItem.Provisiones) {
             // PROVISIONES!
@@ -243,10 +295,11 @@ const RabbitEmpire : Game<IState,ICtx> = {
         const flatMap : ITerritorio[] = [];
         mapa.forEach(subMapa => flatMap.push(...subMapa));
         // const cartas = crearCartas(mapa.flat());
+        const mapaIndexado = flatMap.map(terr=>({y:terr.y, x:terr.x}));
         const cartas = crearCartas(flatMap);
         const mazo = ctx.random.Shuffle( cartas.map(carta=>carta.indice) );
 
-        return ({mapa:mapa,cartas:cartas,mazo:mazo,players:ctx.player.state,
+        return ({mapa:mapa,mapaIndexado:mapaIndexado,feudos:[],cartas:cartas,mazo:mazo,players:ctx.player.state,
             reglas:{cartasElegidasPorTurno:cartasElegidasPorTurno,cartasPorRonda:cartasPorRonda} });
     },
 
@@ -276,7 +329,7 @@ const RabbitEmpire : Game<IState,ICtx> = {
                 activePlayers: {all:'draftear'},
                 stages:{
                     draftear:{
-                        moves: {accionElegirCartas,accionSignal},
+                        moves: {accionElegirCartas,accionTerminar},
                     },
                 },
                 endIf: finDeTurnoRevelar,
@@ -291,7 +344,7 @@ const RabbitEmpire : Game<IState,ICtx> = {
                 activePlayers: {all:'ubicar'},
                 stages:{
                     ubicar:{
-                        moves:{accionTerminar},
+                        moves:{accionUbicar,accionTerminar},
                     }
                 }
             },
