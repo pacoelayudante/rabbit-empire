@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useState } from 'react';
 import { Client } from 'boardgame.io/react';
 import { Local, SocketIO } from 'boardgame.io/multiplayer';
-import {RabbitEmpire} from './rabbit-empire';
+import {RabbitEmpire} from './core/rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 

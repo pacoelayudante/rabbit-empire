@@ -12,6 +12,8 @@
     "@types/react-dom": "^16.9.6",
     "boardgame.io": "^0.39.9",
     "esm": "^3.2.25",
+    "koa-mount": "^4.0.0",
+    "koa-static": "^5.0.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",

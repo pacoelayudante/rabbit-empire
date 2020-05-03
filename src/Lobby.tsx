@@ -1,6 +1,6 @@
 import React from 'react';
 import { Lobby } from 'boardgame.io/react';
-import {RabbitEmpire} from './rabbit-empire';
+import {RabbitEmpire} from './core/rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 

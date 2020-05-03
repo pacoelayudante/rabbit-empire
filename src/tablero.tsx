@@ -1,7 +1,7 @@
 import React, { ReactNode, ChangeEvent, useState, useEffect, useRef } from 'react';
 import { MoveMap, PlayerID } from 'boardgame.io';
-import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './tipos';
-import territoriosElegibles from './validacion';
+import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './core/tipos';
+import territoriosElegibles from './core/validacion';
 
 const imgConejos = [require('./imagenes/conejo_celeste.png'),
     require('./imagenes/conejo_naranja.png'),require('./imagenes/conejo_verde.png')]
