@@ -1,6 +1,7 @@
 import React, { ReactNode, ChangeEvent, useState } from 'react';
 import { MoveMap, PlayerID } from 'boardgame.io';
-import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo } from './tipos';
+import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './tipos';
+import territoriosElegibles from './validacion';
 
 const imgConejos = [require('./imagenes/conejo_celeste.png'),
     require('./imagenes/conejo_naranja.png'),require('./imagenes/conejo_verde.png')]
@@ -55,7 +56,7 @@ const Ficha = ({G,ctx,ficha}:{G?:IState,ctx?:ICtx,ficha:IFicha})=>{
 const Territorio = ({G,ctx,territorio,children}:{G:IState,ctx?:ICtx,territorio:ITerritorio,children:ReactNode}) => {
     const territoriosVecinos = territorio.vecindad.map(indice=>G.mapaIndexado[indice]||({y:-1,x:-1}))
         .map(({y,x})=>G.mapa[y] ? G.mapa[y][x] : undefined);
-    const bordes = territoriosVecinos.reduce((actual,terr,ind)=>actual + ' ' + (terr&&terr.dueño===territorio.dueño?nombreBordes[ind]:''),'');
+    const bordes = territoriosVecinos.reduce((actual,terr,ind)=>actual + ' ' + (terr&&ind<nombreBordes.length&&terr.dueño===territorio.dueño?nombreBordes[ind]:''),'');
 
     return (
         <div className='territorio' style={{backgroundImage:`url(${imgCasilleros[territorio.tipo]})`}}>
@@ -96,10 +97,10 @@ const Item = ({ficha,children}:{ficha:IFicha,children:ReactNode})=>{
 const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap,playerID?: PlayerID,}) => {
     if (playerID) ctx.playerID = playerID;
     const playerIndex = playerID ? ctx.playOrder.indexOf(playerID):-1;
-    const playerData = playerID ? G.players[playerID] : null;
+    const playerData = playerID ? G.jugadores[playerID] : null;
 
     const [indItemActivo,setItemActivo] = useState<number>(-1);
-    const [territorioDestino,setTerritorioDestino] = useState<ITerritorio|null>(null);
+    const [territorioDestino,setTerritorioDestino] = useState(-1);
 
     const mano = playerData?.mano || [];
     const items = playerData?.itemsEnMano || [];
@@ -118,8 +119,40 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap
         onClick:()=>onClickSeleccionable(id),
         className:`seleccionable ${cartasElegidas.includes(id)?'elegido':''}` 
     });
+    const spreadSeleccionableItem = (indItem:number) => ({
+        onClick:()=>{            
+            setTerritorioDestino(-1);
+            setItemActivo(indItem===indItemActivo?-1:indItem)
+        },
+        className:`seleccionable ${indItem===indItemActivo?'elegido':''}` 
+    });
+    const spreadSeleccionableTerritorio = (indTerr:number) => ({
+        onClick:()=>{
+            if(items.find(it=>it.indice===indItemActivo)?.tipo === TipoItem.TorreCelestial) {
+                if (territorioDestino!==-1) {
+                    if (territorioDestino!==indTerr) moves.accionUbicar(indItemActivo,[indTerr,territorioDestino]);
+                    else {
+                        setTerritorioDestino(-1);
+                        return; // evitar clean up
+                    }
+                }
+                else {
+                    setTerritorioDestino(indTerr);
+                    return; // evitar clean up
+                }
+            }
+            else moves.accionUbicar(indItemActivo,[indTerr]);
+            setItemActivo(-1);
+            setTerritorioDestino(-1);
+        },
+        className:`seleccionable ${territorioDestino===indTerr?'elegido':''}`
+    });
 
-    const cambiarListo = (ev:ChangeEvent<HTMLInputElement>)=>moves.accionTerminar(ev.target.checked);
+    const cambiarListo = (ev:ChangeEvent<HTMLInputElement>)=>{
+        moves.accionTerminar(ev.target.checked);
+        setItemActivo(-1);
+        setTerritorioDestino(-1);
+    }
     const listoActivo:{[fase:string]:()=>boolean} = {
         draftear:()=>cartasElegidas.length!==G.reglas.cartasElegidasPorTurno,
     };
@@ -128,16 +161,19 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap
         <Carta key={carta} carta={G.cartas[carta]} playerIndex={playerIndex}>
             {G.cartas[carta].territorio===undefined && <span {...spreadSeleccionable(carta)} />}
         </Carta>)
-    const itemsEnManoRend = items.map((item,indItem)=>
+    const itemsEnManoRend = items.map((item)=>
         <Item key={item.indice} ficha={item}>
-            {ctx.phase==='ubicar' && <span {...spreadSeleccionable(indItem)} />}
+            {ctx.phase==='ubicar' && <span {...spreadSeleccionableItem(item.indice)} />}
         </Item>)
 
+    const itemActivo = items.find(it=>it.indice===indItemActivo);
+    const territoriosUtiles = itemActivo?territoriosElegibles(G,playerID,itemActivo):new Array(G.mapaIndexado.length).fill(false);
     const filaMapaRend = G.mapa.map(fila=><div className='fila' key={fila[0].indice}>
         {fila.map(terr=>
         <Territorio key={terr.indice} G={G} territorio={terr}>
             {terr.dueño&& G.feudos[terr.indiceFeudo||0].territorios[0]===terr.indice && <Feudo feudo={G.feudos[terr.indiceFeudo||0]}/>}
             {mano.includes(terr.indice) && <span {...spreadSeleccionable(terr.indice)}/>}
+            {territoriosUtiles[terr.indice] && <span {...spreadSeleccionableTerritorio(terr.indice)}/>}
         </Territorio>)} </div>)
 
     return (

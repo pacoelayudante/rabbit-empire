@@ -6,7 +6,7 @@ import RabbitEmpire from './rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 
-const cantJugs = 1;
+const cantJugs = 2;
 // const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: SocketIO({ server: '192.168.0.7:8000' }), board: Tablero, debug:false });
 const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: Local(), board: Tablero, debug:document.location.hash.includes('dbg') });
 // const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, board: Tablero });

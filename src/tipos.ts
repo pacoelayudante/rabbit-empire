@@ -105,7 +105,7 @@ export interface IState {
     feudos:IFeudo[],
     mazo:number[],
     cartas:ICarta[],
-    players:Record<string,IJugador>,
+    jugadores:Record<string,IJugador>,
     extra?:any,
     reglas:IReglas,
 }
