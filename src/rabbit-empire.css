@@ -6,6 +6,7 @@
 
     background: linear-gradient(315deg, honeydew, powderblue);
     --img-torres: url('');
+    --cant-casilleros: 3;
 }
 input[type="checkbox"] {
     display: none;
@@ -91,7 +92,7 @@ input.listo+label::after {
     flex-basis: 50%;
     display: flex;
     flex-wrap: wrap;
-    align-content: start;
+    align-content: flex-start;
     overflow: auto;
 }
 
@@ -120,7 +121,6 @@ input.listo+label::after {
 }
 
 .mapa {
-    --cant-casilleros: 3;
     --tam-casillero: calc( 100vmin / var(--cant-casilleros));
     flex-grow: 0;
     flex-shrink: 0;

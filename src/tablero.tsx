@@ -1,4 +1,4 @@
-import React, { ReactNode, ChangeEvent, useState } from 'react';
+import React, { ReactNode, ChangeEvent, useState, useEffect, useRef } from 'react';
 import { MoveMap, PlayerID } from 'boardgame.io';
 import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './tipos';
 import territoriosElegibles from './validacion';
@@ -94,7 +94,7 @@ const Item = ({ficha,children}:{ficha:IFicha,children:ReactNode})=>{
     );
 };
 
-const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap,playerID?: PlayerID,}) => {
+const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: any,playerID?: PlayerID,}) => {
     if (playerID) ctx.playerID = playerID;
     const playerIndex = playerID ? ctx.playOrder.indexOf(playerID):-1;
     const playerData = playerID ? G.jugadores[playerID] : null;
@@ -166,8 +166,9 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap
             {ctx.phase==='ubicar' && <span {...spreadSeleccionableItem(item.indice)} />}
         </Item>)
 
+    const pid = playerID||''; // para que no joda typescript
     const itemActivo = items.find(it=>it.indice===indItemActivo);
-    const territoriosUtiles = itemActivo?territoriosElegibles(G,playerID,itemActivo):new Array(G.mapaIndexado.length).fill(false);
+    const territoriosUtiles = itemActivo?territoriosElegibles(G,pid,itemActivo):new Array(G.mapaIndexado.length).fill(false);
     const filaMapaRend = G.mapa.map(fila=><div className='fila' key={fila[0].indice}>
         {fila.map(terr=>
         <Territorio key={terr.indice} G={G} territorio={terr}>
@@ -176,9 +177,17 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: MoveMap
             {territoriosUtiles[terr.indice] && <span {...spreadSeleccionableTerritorio(terr.indice)}/>}
         </Territorio>)} </div>)
 
+    const tableroRef = useRef<HTMLDivElement>(null);
+    useEffect(()=>{
+        if(tableroRef.current) {
+            tableroRef.current.style.setProperty('--img-torres',`url(${imgTorres})`);
+            tableroRef.current.style.setProperty('--cant-casilleros',G.mapa.length.toString());
+        }
+    });
+
     return (
-        <div className={'tablero '+ctx.phase+((playerData?.terminado)?' terminado':'')} style={{'--img-torres':`url(${imgTorres})`}}>
-            <div className='mapa' style={{ '--cant-casilleros': G.mapa.length }}>
+        <div ref={tableroRef} className={'tablero '+ctx.phase+((playerData?.terminado)?' terminado':'')}>
+            <div className='mapa'>
                 {filaMapaRend}
             </div>
             {playerID && <div className='jugador'>

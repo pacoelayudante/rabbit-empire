@@ -1,15 +1,17 @@
 import React, { ChangeEvent, useState } from 'react';
 import { Client } from 'boardgame.io/react';
-import { Ctx } from 'boardgame.io';
 import { Local, SocketIO } from 'boardgame.io/multiplayer';
-import RabbitEmpire from './rabbit-empire';
+import {RabbitEmpire} from './rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 
 const cantJugs = 2;
-// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: SocketIO({ server: '192.168.0.7:8000' }), board: Tablero, debug:false });
-const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: Local(), board: Tablero, debug:document.location.hash.includes('dbg') });
-// const RabbitEmpireClient = Client({ game: RabbitEmpire, numPlayers:cantJugs, board: Tablero });
+const host = document.location.hash.includes('host');
+const dbg = document.location.hash.includes('dbg');
+const RabbitEmpireClient = host ?
+   Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: SocketIO({ server: '192.168.0.7:8000' }), board: Tablero, debug:dbg })
+   : 
+   Client({ game: RabbitEmpire, numPlayers:cantJugs, multiplayer: Local(), board: Tablero, debug:dbg });
 
 const Menu = ({cambiarPID}:{cambiarPID:(pid:string)=>void})=>{
   const opciones = new Map([

@@ -62,12 +62,12 @@ const vecindadesMapper = (indice: number): number[] => {
     ];
 };
 
-const fichaUbicable = (jug: IJugador, ficha: IFicha, territorio: ITerritorio): boolean => {
-    if (!jug.itemsEnMano.includes(ficha) || territorio.dueño !== jug.id || territorio.ficha) return false;
-    if (ficha.torres && ficha.torres >= 3 && territorio.tipo !== TipoTerritorio.Montaña) return false;
-    if (ficha.recurso && requerimentosDeLujo[ficha.recurso] && territorio.tipo !== requerimentosDeLujo[ficha.recurso]) return false;
-    return true;
-}
+// const fichaUbicable = (jug: IJugador, ficha: IFicha, territorio: ITerritorio): boolean => {
+//     if (!jug.itemsEnMano.includes(ficha) || territorio.dueño !== jug.id || territorio.ficha) return false;
+//     if (ficha.torres && ficha.torres >= 3 && territorio.tipo !== TipoTerritorio.Montaña) return false;
+//     if (ficha.recurso && requerimentosDeLujo[ficha.recurso] && territorio.tipo !== requerimentosDeLujo[ficha.recurso]) return false;
+//     return true;
+// }
 
 const mapeoTerritoriosLetra: any = {
     'c': TipoTerritorio.PuebloInicial,
@@ -103,14 +103,14 @@ const crearCartas = (territorios: ITerritorio[]): ICarta[] => {
         }),
     );
 
-    const cartasCastillos = cantCastillos.flatMap(
+    const cartasCastillos = cantCastillos.map(
         (cants, cantTorres): ICarta[] => new Array(cants).fill('').map(
             (): ICarta => ({
                 indice: (++indiceDeCarta), tipo: TipoCarta.Item, nombre: 'ciudad',
                 item: { indice: indiceDeCarta, tipo: TipoItem.Castillo, torres: (cantTorres + 1) }
             })
         )
-    );
+    ).reduce((a,b)=>a.concat(b),[]);
 
     const cartasCamps = new Array(cantCampamentos).fill('').map(
         (nada, indice): ICarta => ({
@@ -126,14 +126,14 @@ const crearCartas = (territorios: ITerritorio[]): ICarta[] => {
         })
     );
 
-    const cartasRecursos = cantCartasRecurso.flatMap(
+    const cartasRecursos = cantCartasRecurso.map(
         (combo): ICarta[] => new Array(combo.cant).fill('').map(
             (): ICarta => ({
                 indice: (++indiceDeCarta), tipo: TipoCarta.Item, nombre: 'recurso',
                 item: { indice: indiceDeCarta, tipo: TipoItem.Recurso, recurso: combo.tipo }
             })
         )
-    );
+    ).reduce((a,b)=>a.concat(b),[]);;
 
     return [...cartasTerritorios, ...cartasCastillos, ...cartasCamps, ...cartasTorres, ...cartasRecursos];
 }
@@ -288,7 +288,7 @@ const realizarRevelarTerritorio = (G: IState, jug: IJugador, territorio: ITerrit
 };
 
 const RabbitEmpire: Game<IState, ICtx> = {
-    name: 'RabbitEmpire',
+    name: 'rabbit-empire',
 
     plugins: [PluginPlayer({ setup: playerSetup })],
 
@@ -364,4 +364,4 @@ const RabbitEmpire: Game<IState, ICtx> = {
 
 }
 
-export default RabbitEmpire;
+export {RabbitEmpire};
