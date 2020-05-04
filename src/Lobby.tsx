@@ -4,7 +4,7 @@ import { RabbitEmpire } from './core/rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 
-const server = document.location.href.includes('heroku') ? `https://rabbit-empire.herokuapp.com` : `http://192.168.0.7:8000`;
+const server = `https://rabbit-empire.herokuapp.com`;
 const importedGames = [{ game: RabbitEmpire, board: Tablero }];
 
 export default () => {
