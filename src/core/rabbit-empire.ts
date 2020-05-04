@@ -5,7 +5,7 @@ import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, 
 import {fichaValidaParaTerritorio, puntosPorFeudo} from './comunes';
 
 const cantRondas :number = 3;
-const cartasPorRonda: number = 6;
+const cartasPorRonda: number = 10;
 const cartasElegidasPorTurno: number = 2;
 
 const cantCastillos: number[] = [9, 9, 3];
