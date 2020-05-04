@@ -1,13 +1,46 @@
-.app {
+.tablero {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+
     margin: none;
     padding: none;
     overflow: hidden;
     user-select: none;
 
+    transition: 0.2s max-height;
+
     background: linear-gradient(315deg, honeydew, powderblue);
     --img-torres: url('');
     --cant-casilleros: 3;
 }
+
+.tablero {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+}
+.minimizado .tablero {
+    max-height: 10vh;
+}
+label.minimizar {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    padding: 0.25em 0.5em;
+    background: linear-gradient(30deg, cornflowerblue, lavender);
+    color: indigo;
+    z-index: 1;
+}
+label.minimizar::after {
+    content: 'Minimizar';
+}
+input:checked+label.minimizar::after {
+    content: 'Maximizar';
+}
+
 input[type="checkbox"] {
     display: none;
 }
@@ -64,17 +97,6 @@ input.listo+label::after {
     top: 0;
     right: 0;
 }
-
-.tablero {
-    display: flex;
-    flex-direction: column;
-    width: 100vw;
-    height: 100vh;
-}
-
-/* .app>div:not(:first-child) {
-    display: none;
-} */
 
 .jugador {
     flex-grow: 1;
@@ -182,6 +204,9 @@ input.listo+label::after {
     justify-items: center;
     align-items: center;
     font-weight: bolder;
+}
+.sin-mercado .mercado {
+    opacity: 0.5;
 }
 
 .ficha {

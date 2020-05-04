@@ -2,8 +2,9 @@ import { PluginPlayer } from 'boardgame.io/plugins';
 import { Game, Ctx, PlayerID } from 'boardgame.io';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, IJugador, IState, ICtx, IFicha, IFeudo } from './tipos';
-import {fichaValidaParaTerritorio} from './validacion';
+import {fichaValidaParaTerritorio, puntosPorFeudo} from './comunes';
 
+const cantRondas :number = 3;
 const cartasPorRonda: number = 4
 const cartasElegidasPorTurno: number = 2
 
@@ -62,13 +63,6 @@ const vecindadesMapper = (indice: number): number[] => {
     ];
 };
 
-// const fichaUbicable = (jug: IJugador, ficha: IFicha, territorio: ITerritorio): boolean => {
-//     if (!jug.itemsEnMano.includes(ficha) || territorio.dueño !== jug.id || territorio.ficha) return false;
-//     if (ficha.torres && ficha.torres >= 3 && territorio.tipo !== TipoTerritorio.Montaña) return false;
-//     if (ficha.recurso && requerimentosDeLujo[ficha.recurso] && territorio.tipo !== requerimentosDeLujo[ficha.recurso]) return false;
-//     return true;
-// }
-
 const mapeoTerritoriosLetra: any = {
     'c': TipoTerritorio.PuebloInicial,
     'p': TipoTerritorio.Pradera,
@@ -103,6 +97,13 @@ const crearCartas = (territorios: ITerritorio[]): ICarta[] => {
         }),
     );
 
+    const cartasCamps = new Array(cantCampamentos).fill('').map(
+        (nada, indice): ICarta => ({
+            indice: (++indiceDeCarta), tipo: TipoCarta.Item, nombre: 'campamento',
+            item: { indice: indiceDeCarta, tipo: TipoItem.Campamento, prioridad: indice }
+        })
+    );
+
     const cartasCastillos = cantCastillos.map(
         (cants, cantTorres): ICarta[] => new Array(cants).fill('').map(
             (): ICarta => ({
@@ -111,13 +112,6 @@ const crearCartas = (territorios: ITerritorio[]): ICarta[] => {
             })
         )
     ).reduce((a,b)=>a.concat(b),[]);
-
-    const cartasCamps = new Array(cantCampamentos).fill('').map(
-        (nada, indice): ICarta => ({
-            indice: (++indiceDeCarta), tipo: TipoCarta.Item, nombre: 'campamento',
-            item: { indice: indiceDeCarta, tipo: TipoItem.Campamento, prioridad: indice }
-        })
-    );
 
     const cartasTorres = new Array(cantTorres).fill('').map(
         (nada, indice): ICarta => ({
@@ -160,6 +154,9 @@ const accionTerminar = (G: IState, ctx: ICtx, terminar: boolean) => {
         return INVALID_MOVE;
     }
     G.jugadores[ctx.playerID].terminado = terminar;
+    if (ctx.phase === 'puntuar') {
+        if (ctx.events.setPhase) ctx.events.setPhase('robar');
+    }
 };
 
 const accionElegirCartas = (G: IState, ctx: ICtx, cartas: number[]) => {
@@ -286,6 +283,12 @@ const realizarRevelarTerritorio = (G: IState, jug: IJugador, territorio: ITerrit
     territorio.dueño = jug.id;
     if (territorio.ficha && territorio.ficha.tipo === TipoItem.Campamento) territorio.ficha = undefined;
 };
+const realizarPuntuacion = (G:IState, ctx:ICtx)=>{
+    ctx.playOrder.forEach( jugid => {
+        G.jugadores[jugid].ptsPorTurno.unshift(0);
+    });
+    G.feudos.forEach(feudo=>G.jugadores[feudo.dueño].ptsPorTurno[0]+=puntosPorFeudo(feudo));
+};
 
 const RabbitEmpire: Game<IState, ICtx> = {
     name: 'rabbit-empire',
@@ -357,9 +360,16 @@ const RabbitEmpire: Game<IState, ICtx> = {
                 }
             },
             endIf: (G: IState, ctx: ICtx) => ctx.playOrder.every(pid => G.jugadores[pid].terminado),
-            next: 'robar',
+            onEnd: (G: IState, ctx: ICtx) => ctx.playOrder.forEach((jug, index) => {G.jugadores[jug].terminado = false}),
+            next: 'puntuar',
         },
-        puntuar: {},
+        puntuar: {
+            onBegin: realizarPuntuacion,
+            turn: {
+                activePlayers: {all:'puntuar'},
+                stages:{puntuar:{moves:{accionTerminar}}},
+            }
+        },
     },
 
 }

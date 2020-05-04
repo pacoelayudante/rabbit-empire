@@ -1,7 +1,7 @@
 import React, { ReactNode, ChangeEvent, useState, useEffect, useRef } from 'react';
 import { MoveMap, PlayerID } from 'boardgame.io';
 import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './core/tipos';
-import territoriosElegibles from './core/validacion';
+import { territoriosElegibles, recursoMercadoActivo } from './core/comunes';
 
 const imgConejos = [require('./imagenes/conejo_celeste.png'),
     require('./imagenes/conejo_naranja.png'),require('./imagenes/conejo_verde.png')]
@@ -68,9 +68,9 @@ const Territorio = ({G,ctx,territorio,children}:{G:IState,ctx?:ICtx,territorio:I
 };
 
 const Feudo = ({feudo}:{feudo:IFeudo})=>{
-    const recursos = feudo.recursos.filter((rec,i)=>feudo.recursos.indexOf(rec)===i)
-        .map(rec=><img key={rec} src={imgRecursos[rec][1]} alt={'Feudo tiene '+rec}/>);
-    return (<div className='feudo'>
+    const recursosFiltrados = feudo.recursos.filter((rec,i)=>feudo.recursos.indexOf(rec)===i);
+    const recursos = recursosFiltrados.map(rec=><img key={rec} src={imgRecursos[rec][1]} alt={'Feudo tiene '+rec} className={rec}/>);
+    return (<div className={'feudo '+(recursoMercadoActivo(recursosFiltrados)?'':'sin-mercado')}>
                 {recursos.length>0 && <div className='recursos'>{recursos}</div>}
                 {feudo.torres>0 && <div className='torres'>{feudo.torres}</div>}
             </div>);
@@ -161,7 +161,7 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: any,pla
         <Carta key={carta} carta={G.cartas[carta]} playerIndex={playerIndex}>
             {G.cartas[carta].territorio===undefined && <span {...spreadSeleccionable(carta)} />}
         </Carta>)
-    const itemsEnManoRend = items.map((item)=>
+    const itemsEnManoRend = items.sort((c1,c2)=>c1.indice-c2.indice).map((item)=>
         <Item key={item.indice} ficha={item}>
             {ctx.phase==='ubicar' && <span {...spreadSeleccionableItem(item.indice)} />}
         </Item>)

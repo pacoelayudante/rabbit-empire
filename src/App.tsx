@@ -5,7 +5,7 @@ import {RabbitEmpire} from './core/rabbit-empire';
 import Tablero from './tablero';
 import './rabbit-empire.css';
 
-const cantJugs = 2;
+const cantJugs = 1;
 const host = document.location.hash.includes('host');
 const dbg = document.location.hash.includes('dbg');
 const RabbitEmpireClient = host ?

@@ -60,7 +60,7 @@ export interface ICarta {
     tipo:TipoCarta,
     nombre:string,
     territorio?:number,
-    pergamino?:string,
+    pergamino?:number,
     item?:IFicha,
     dueño?:IJugador,
 }
@@ -68,7 +68,7 @@ export interface ICarta {
 export interface IFicha {
     indice:number,
     tipo:TipoItem,
-    prioridad?:number,
+    prioridad?:number,// <-- posible reemplazable por indice
     color?:number,
     torres?:number,
     recurso?:TipoRecurso,
@@ -97,6 +97,19 @@ export interface IFeudo {
 export interface IReglas {
     cartasPorRonda:number,
     cartasElegidasPorTurno : number,
+}
+
+export interface ITesoro {
+    indice:number,
+    nombre:string,
+    puntajeBasico:number,
+    puntajeExtra?:()=>number,
+}
+export interface IPergamino {
+    indice:number,
+    nombre:string,
+    preparacion:()=>void,
+    puntaje:()=>number,
 }
 
 export interface IState {
