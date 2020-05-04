@@ -12,6 +12,7 @@
 
     background: linear-gradient(315deg, honeydew, powderblue);
     --img-torres: url('');
+    --img-moneda: url('');
     --cant-casilleros: 3;
 }
 
@@ -122,6 +123,33 @@ input.listo+label::after {
     flex-basis: unset;
     flex-grow: 0;
     overflow: hidden;
+    flex-direction: column;
+}
+.data>.puntos {
+    position: relative;
+    width: 6vmax;
+    height: 6vmax;
+}
+.data>.puntos.actual {
+    box-shadow: inset 0 0 5vmax -1vmax cornflowerblue;
+}
+.data>.puntos>* {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.data>.puntos>span {
+    width: 100%;
+    height: 100%;
+    padding: 5%;
+    font-weight: bolder;
+}
+.data>.puntos>img {
+    top: -25%;
+    left: -25%;
+    width: 150%;
+    height: 150%;
 }
 
 @media screen and (min-aspect-ratio: 1/1) {
@@ -130,6 +158,9 @@ input.listo+label::after {
     }
     .jugador {
         flex-direction: column;
+    }
+    .jugador>.data {
+        flex-direction: row;
     }
 }
 
@@ -209,6 +240,31 @@ input.listo+label::after {
     opacity: 0.5;
 }
 
+.mapa .feudo .puntos {
+    display: none;
+}
+.puntuar .mapa .feudo .puntos {
+    display: block;
+    position: absolute;
+    background-image: var(--img-moneda);
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    top: 0%;
+    left: 0%;
+    width: 100%;
+    height: 0%;
+    padding: 50% 0%;
+    line-height: 0;
+    font-size: calc(var(--tam-casillero) * 0.4);
+    font-weight: bolder;
+    text-align: center;
+    box-shadow: 0 0 10px 0px black;
+}
+.puntuar .mapa .feudo .puntos:active {
+    opacity: 0.3;
+}
+
 .ficha {
     width: auto;
     height: auto;
@@ -217,6 +273,13 @@ input.listo+label::after {
     position: absolute;
     width: 100%;
     height: 100%;
+}
+.puntuar .territorio::before {
+    content: ' ';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.75);
 }
 .mapa .territorio>img {
     margin: 3%;
@@ -245,5 +308,5 @@ input.listo+label::after {
     color: orange;
 }
 .territorio>img.c2 {
-    color: green;
+    color: greenyellow;
 }

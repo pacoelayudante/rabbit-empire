@@ -1,7 +1,7 @@
 import React, { ReactNode, ChangeEvent, useState, useEffect, useRef } from 'react';
 import { MoveMap, PlayerID } from 'boardgame.io';
 import { ITerritorio, TipoTerritorio, IState, ICarta, ICtx, IFicha, TipoRecurso, IFeudo, TipoItem } from './core/tipos';
-import { territoriosElegibles, recursoMercadoActivo } from './core/comunes';
+import { territoriosElegibles, recursoMercadoActivo, puntosPorFeudo } from './core/comunes';
 
 const imgConejos = [require('./imagenes/conejo_celeste.png'),
     require('./imagenes/conejo_naranja.png'),require('./imagenes/conejo_verde.png')]
@@ -30,6 +30,7 @@ const imgRecursos = {
     [TipoRecurso.Vacio]: [null,null],
 };
 // const imgArrow = require('./imagenes/arrow.svg');
+const imgMoneda = require('./imagenes/moneda.png');
 const imgTorres = require('./imagenes/hay_torres.png');
 const imgCamp = require('./imagenes/camp.png');
 const imgTorresCelestiales = [require('./imagenes/torre_negra.png'),
@@ -73,6 +74,7 @@ const Feudo = ({feudo}:{feudo:IFeudo})=>{
     return (<div className={'feudo '+(recursoMercadoActivo(recursosFiltrados)?'':'sin-mercado')}>
                 {recursos.length>0 && <div className='recursos'>{recursos}</div>}
                 {feudo.torres>0 && <div className='torres'>{feudo.torres}</div>}
+                <div className='puntos'>{puntosPorFeudo(feudo)}</div>
             </div>);
 };
 
@@ -101,6 +103,7 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: any,pla
 
     const [indItemActivo,setItemActivo] = useState<number>(-1);
     const [territorioDestino,setTerritorioDestino] = useState(-1);
+    // const []
 
     const mano = playerData?.mano || [];
     const items = playerData?.itemsEnMano || [];
@@ -181,9 +184,15 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: any,pla
     useEffect(()=>{
         if(tableroRef.current) {
             tableroRef.current.style.setProperty('--img-torres',`url(${imgTorres})`);
+            tableroRef.current.style.setProperty('--img-moneda',`url(${imgMoneda})`);
             tableroRef.current.style.setProperty('--cant-casilleros',G.mapa.length.toString());
         }
     });
+
+    const jugadores = ctx.playOrder.map((pid,idx)=><div key={pid} className={'puntos '+(pid===playerID?'actual':'')}>
+        <img src={imgConejos[idx]} alt={'puntaje de jugador '+pid}/>
+        <span>{G.jugadores[pid].ptsPorTurno.reduce((prev,curr)=>prev+curr,0)}</span>
+    </div>);
 
     return (
         <div ref={tableroRef} className={'tablero '+ctx.phase+((playerData?.terminado)?' terminado':'')}>
@@ -192,10 +201,10 @@ const Tablero = ({ G, ctx, moves, playerID }:{G: IState,ctx: ICtx,moves: any,pla
             </div>
             {playerID && <div className='jugador'>
                 <div className='data'>
-                    Jugador {playerData?.nombre} ({playerID})
+                    {jugadores}
                     <input id='listo' className='listo' type='checkbox' disabled={listoActivo[ctx.phase]?listoActivo[ctx.phase]():false}
                         checked={playerData?.terminado} onChange={cambiarListo}/>
-                    <label htmlFor='listo'/>
+                    {ctx.phase!=='final' && <label htmlFor='listo'/>}
                 </div>
                 <div className='mano'>{cartasEnManoRend}</div>
                 <div className='items'>{itemsEnManoRend}</div>

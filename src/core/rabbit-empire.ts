@@ -5,8 +5,8 @@ import { TipoRecurso, TipoTerritorio, ITerritorio, TipoItem, TipoCarta, ICarta, 
 import {fichaValidaParaTerritorio, puntosPorFeudo} from './comunes';
 
 const cantRondas :number = 3;
-const cartasPorRonda: number = 4
-const cartasElegidasPorTurno: number = 2
+const cartasPorRonda: number = 6;
+const cartasElegidasPorTurno: number = 2;
 
 const cantCastillos: number[] = [9, 9, 3];
 const cantCampamentos: number = 6;
@@ -32,24 +32,24 @@ const recursosBaseDeRecursos: any = {
 };
 
 const premapa: string[] = [
-    'ccc cc',
-    'ccc cc',
-    'ccc cc',
+    // 'ccc cc',
+    // 'ccc cc',
+    // 'ccc cc',
 
-    'ccc cc',
-    'ccc cc',
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
+    // 'ccc cc',
+    // 'ccc cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
 
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
 
-    // 'cpgb mblp cc',
-    // 'cpgb mblp cc',
+    'cpgb mblp cc',
+    'cpgb mblp cc',
 ].map(fila => fila.replace(/[^cpgbml]/gi, ''));//trimear mapa
 
 const ancho = premapa[0].length;
@@ -154,8 +154,11 @@ const accionTerminar = (G: IState, ctx: ICtx, terminar: boolean) => {
         return INVALID_MOVE;
     }
     G.jugadores[ctx.playerID].terminado = terminar;
-    if (ctx.phase === 'puntuar') {
-        if (ctx.events.setPhase) ctx.events.setPhase('robar');
+    if (ctx.events.setPhase && ctx.playOrder.every(pid=>G.jugadores[pid].terminado)) {
+        if (ctx.phase === 'puntuar') {
+            if (G.jugadores['0'].ptsPorTurno.length < cantRondas) ctx.events.setPhase('robar');
+            else ctx.events.setPhase('final');
+        }
     }
 };
 
@@ -226,9 +229,14 @@ const finDeTurnoRevelar = (G: IState, ctx: ICtx) => {
         jug.terminado = false;
         return jug;
     });
+
+    // pasar manos al siguiente
     const manos = newJugState.map(jug => jug.mano);
+    const pasarMano = G.jugadores['0'].ptsPorTurno.length%2==0?1:ctx.playOrder.length-1;
+    console.log(`pasando mano -> ${pasarMano}`);
+
     newJugState.forEach((jug, indice) => {
-        jug.mano = manos[(indice + 1) % manos.length];
+        jug.mano = manos[(indice + pasarMano) % manos.length];
         G.jugadores[jug.id] = jug;
     });
     actualizarFeudos(G);
@@ -286,6 +294,7 @@ const realizarRevelarTerritorio = (G: IState, jug: IJugador, territorio: ITerrit
 const realizarPuntuacion = (G:IState, ctx:ICtx)=>{
     ctx.playOrder.forEach( jugid => {
         G.jugadores[jugid].ptsPorTurno.unshift(0);
+        G.jugadores[jugid].terminado = false;
     });
     G.feudos.forEach(feudo=>G.jugadores[feudo.dueño].ptsPorTurno[0]+=puntosPorFeudo(feudo));
 };
@@ -370,6 +379,9 @@ const RabbitEmpire: Game<IState, ICtx> = {
                 stages:{puntuar:{moves:{accionTerminar}}},
             }
         },
+        final: {
+            
+        }
     },
 
 }
